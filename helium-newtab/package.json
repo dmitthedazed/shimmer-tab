@@ -1,11 +1,13 @@
 {
     "name": "shimmer-tab",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "private": true,
     "type": "module",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
+        "build:web": "vite build --mode web --outDir dist-web && rm -r dist-web/manifest.json dist-web/_locales",
+        "pages": "sh scripts/deploy-pages.sh",
         "bangs:refresh": "node scripts/refresh-bangs.mjs",
         "icons:refresh": "node scripts/refresh-svg-icons.mjs",
         "zip": "vite build && rm -f ../store/shimmer-tab-*.zip && cd dist && zip -qr ../../store/shimmer-tab-$npm_package_version.zip ."
@@ -13,7 +15,8 @@
     "dependencies": {
         "@fontsource-variable/instrument-sans": "^5.3.0",
         "@imput/helium-prism": "^0.2.0",
-        "@material/material-color-utilities": "^0.4.0"
+        "@material/material-color-utilities": "^0.4.0",
+        "@takustaqu/atmosphere": "^0.8.0"
     },
     "devDependencies": {
         "@sveltejs/vite-plugin-svelte": "^7.3.1",

@@ -1,8 +1,11 @@
+import { t } from "./i18n";
 // Current weather from Open-Meteo (no key) for a manually set city.
 export type Weather = {
     temp: number;
     code: number;
     day: boolean;
+    /** local hour at the place, 0..24 */
+    hour?: number;
     place: string;
     country?: string;
     feels?: number;
@@ -14,8 +17,11 @@ export type Weather = {
     unit: "C" | "F";
 };
 
-const CACHE = "weather2";
+const CACHE = "weather3";
 const MAX_AGE = 15 * 60 * 1000;
+// after a try that fails, leave Open-Meteo alone for a bit (reloads, flaky networks)
+const ATTEMPT = "weather-try";
+const BACKOFF = 60 * 1000;
 
 type Place = { lat: number; lon: number; name: string; country?: string };
 
@@ -29,6 +35,12 @@ async function geocode(city: string): Promise<Place | null> {
     return hit ? { lat: hit.latitude, lon: hit.longitude, name: hit.name, country: hit.country } : null;
 }
 
+
+// Open-Meteo's `current.time` is the place's own clock ("2026-10-26T08:15")
+const hourOf = (time: unknown) => {
+    const m = typeof time === "string" ? /T(\d\d):(\d\d)/.exec(time) : null;
+    return m ? Number(m[1]) + Number(m[2]) / 60 : undefined;
+};
 
 /** Last fetched weather for these settings, even if stale; for the first frame. */
 export function peekWeather(city: string, fahrenheit: boolean): Weather | null {
@@ -47,8 +59,16 @@ export async function getWeather(city: string, fahrenheit: boolean): Promise<Wea
         if (cached?.key === key && Date.now() - cached.at < MAX_AGE) return cached.weather;
     } catch {}
 
+    if (!city.trim()) return null;
+    const stale = peekWeather(city, fahrenheit);
     try {
-        if (!city.trim()) return null;
+        // per city, so typing a new one is never held back
+        const last = JSON.parse(localStorage.getItem(ATTEMPT) ?? "null");
+        if (last?.key === key && Date.now() - last.at < BACKOFF) return stale;
+        localStorage.setItem(ATTEMPT, JSON.stringify({ key, at: Date.now() }));
+    } catch {}
+
+    try {
         const place = await geocode(city.trim());
         if (!place) return null;
         const url = new URL("https://api.open-meteo.com/v1/forecast");
@@ -75,6 +95,7 @@ export async function getWeather(city: string, fahrenheit: boolean): Promise<Wea
             temp: Math.round(current.temperature_2m),
             code: current.weather_code,
             day: current.is_day === 1,
+            hour: hourOf(current.time),
             place: place.name,
             country: place.country,
             feels: round(current.apparent_temperature),
@@ -87,23 +108,24 @@ export async function getWeather(city: string, fahrenheit: boolean): Promise<Wea
         };
         try {
             localStorage.setItem(CACHE, JSON.stringify({ key, at: Date.now(), weather }));
+            localStorage.removeItem(ATTEMPT);
         } catch {}
         return weather;
     } catch {
-        return null;
+        return stale;
     }
 }
 
 /** WMO weather code → icon kind and label */
 export function describe(code: number): { kind: string; label: string } {
-    if (code === 0) return { kind: "clear", label: "Clear" };
-    if (code <= 2) return { kind: "partly", label: "Partly cloudy" };
-    if (code === 3) return { kind: "cloud", label: "Overcast" };
-    if (code <= 48) return { kind: "fog", label: "Fog" };
-    if (code <= 57) return { kind: "rain", label: "Drizzle" };
-    if (code <= 67) return { kind: "rain", label: "Rain" };
-    if (code <= 77) return { kind: "snow", label: "Snow" };
-    if (code <= 82) return { kind: "rain", label: "Showers" };
-    if (code <= 86) return { kind: "snow", label: "Snow showers" };
-    return { kind: "storm", label: "Thunderstorm" };
+    if (code === 0) return { kind: "clear", label: t("weather_clear") };
+    if (code <= 2) return { kind: "partly", label: t("weather_partly_cloudy") };
+    if (code === 3) return { kind: "cloud", label: t("weather_overcast") };
+    if (code <= 48) return { kind: "fog", label: t("weather_fog") };
+    if (code <= 57) return { kind: "rain", label: t("weather_drizzle") };
+    if (code <= 67) return { kind: "rain", label: t("weather_rain") };
+    if (code <= 77) return { kind: "snow", label: t("weather_snow") };
+    if (code <= 82) return { kind: "rain", label: t("weather_showers") };
+    if (code <= 86) return { kind: "snow", label: t("weather_snow_showers") };
+    return { kind: "storm", label: t("weather_thunderstorm") };
 }

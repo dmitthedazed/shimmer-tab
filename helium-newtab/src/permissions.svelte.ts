@@ -6,6 +6,9 @@ const TOP_SITES: chrome.permissions.Permissions = { permissions: ["topSites"] };
 
 const api = typeof chrome !== "undefined" ? chrome.permissions : undefined;
 
+/** The plain web page (GitHub Pages): no extension APIs, and other sites can't be read. */
+export const WEB = import.meta.env.MODE === "web";
+
 /** `epoch` bumps on every change so icons can re-resolve with the new access. */
 export const perms = $state({ sites: false, policy: false, topSites: false, epoch: 0 });
 
@@ -25,7 +28,7 @@ api?.onRemoved.addListener(refresh);
 
 /** Reading other sites (for their own icons). Outside the extension there's nothing to ask. */
 export async function canReadSites() {
-    return api ? api.contains(SITES) : true;
+    return api ? api.contains(SITES) : !WEB;
 }
 
 const sets = { sites: SITES, policy: POLICY, topSites: TOP_SITES };

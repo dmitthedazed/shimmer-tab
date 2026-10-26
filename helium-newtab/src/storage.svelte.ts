@@ -1,15 +1,24 @@
 export type Shortcut = { title: string; url: string };
 
 export type Settings = {
-    background: "shimmer" | "stars" | "random" | "none";
+    background: "shimmer" | "stars" | "weather" | "image" | "random" | "none";
+    /** blur of the picture wallpaper, in px */
+    imageBlur: number;
     clock: boolean;
     hour12: boolean;
     seconds: boolean;
     browserTheme: boolean;
+    /** seed for browser colors when no BrowserThemeColor policy is set (unmanaged browsers) */
+    themeColor: string;
     bangs: boolean;
-    logoText: boolean;
+    /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
+    logo: "greeting" | "wordmark" | "mark";
+    /** where the logo, search and shortcuts sit across the page */
+    align: "left" | "center" | "right";
     /** focus mode: only the logo and the search bar */
     quiet: boolean;
+    /** entrance animation of the wallpaper on page load */
+    intro: boolean;
     shortcuts: boolean;
     lockShortcuts: boolean;
     shortcutTitles: boolean;
@@ -27,13 +36,17 @@ export type Settings = {
 
 export const defaults: Settings = {
     background: "shimmer",
+    imageBlur: 0,
     clock: true,
     hour12: false,
     seconds: false,
     browserTheme: false,
+    themeColor: "",
     bangs: true,
-    logoText: true,
+    logo: "greeting",
+    align: "center",
     quiet: false,
+    intro: true,
     shortcuts: true,
     lockShortcuts: false,
     shortcutTitles: true,
@@ -61,6 +74,10 @@ export function normalize(raw: Record<string, unknown> | null | undefined): Sett
     // pre-1.1 had a plain shimmer on/off toggle
     if (raw && !raw.background && raw.shimmer === false) settings.background = "none";
     delete (settings as { shimmer?: boolean }).shimmer;
+    // before greetings: a `logoText` toggle; existing setups keep what they had
+    if (raw && !["greeting", "wordmark", "mark"].includes(raw.logo as string))
+        settings.logo = Object.keys(raw).length ? (raw.logoText === false ? "mark" : "wordmark") : defaults.logo;
+    delete (settings as { logoText?: boolean }).logoText;
     return settings;
 }
 
@@ -76,26 +93,65 @@ export function loadCached(): Settings {
     }
 }
 
+// what the stores hold now, in a fixed key order: opening a tab must not write anything
+let stored = "";
+const canon = (settings: Settings) => JSON.stringify(normalize(settings as unknown as Record<string, unknown>));
+
 export async function load(): Promise<Settings> {
     try {
         const raw = hasChrome
             ? (await chrome.storage.sync.get(KEY))[KEY]
             : JSON.parse(localStorage.getItem(MIRROR) ?? "null");
-        return normalize(raw);
+        const settings = normalize(raw);
+        stored = canon(settings);
+        return settings;
     } catch {
         return loadCached();
     }
 }
 
-// the old runtime-downloaded bang cache is no longer used
-if (hasChrome) chrome.storage.local.remove("bangs").catch(() => {});
+// the old runtime-downloaded bang cache is no longer used; dropped once, not on every tab
+if (hasChrome && !localStorage.getItem("bangs-dropped")) {
+    chrome.storage.local
+        .remove("bangs")
+        .then(() => localStorage.setItem("bangs-dropped", "1"))
+        .catch(() => {});
+}
 
-export async function save(settings: Settings) {
-    const plain = $state.snapshot(settings);
+// chrome.storage.sync allows ~120 writes a minute: typing a city must not spend them, and
+// neither must a page that is reloaded over and over. Only real changes are written, and a
+// burst of them as one write after it settles. The local mirror is cheap, so it is immediate.
+let latest: Settings | null = null;
+let timer: ReturnType<typeof setTimeout> | undefined;
+
+async function flush() {
+    clearTimeout(timer);
+    const settings = latest;
+    latest = null;
+    if (!settings || !hasChrome) return;
+    const json = canon(settings);
+    if (json === stored) return;
+    stored = json;
     try {
-        localStorage.setItem(MIRROR, JSON.stringify(plain));
+        await chrome.storage.sync.set({ [KEY]: settings });
+    } catch {
+        stored = ""; // over quota or offline: the next change tries again
+    }
+}
+
+if (typeof addEventListener !== "undefined") addEventListener("pagehide", () => void flush());
+
+export function save(settings: Settings) {
+    const plain = $state.snapshot(settings);
+    const json = canon(plain);
+    if (!hasChrome && json === stored) return;
+    try {
+        if (localStorage.getItem(MIRROR) !== json) localStorage.setItem(MIRROR, json);
     } catch {}
-    if (hasChrome) await chrome.storage.sync.set({ [KEY]: plain });
+    if (!hasChrome) return void (stored = json);
+    latest = plain;
+    clearTimeout(timer);
+    if (json !== stored) timer = setTimeout(flush, 500);
 }
 
 export function normalizeUrl(input: string) {
@@ -115,4 +171,24 @@ export function favicon(origin: string, size = 18) {
     url.searchParams.set("pageUrl", origin);
     url.searchParams.set("size", String(Math.ceil(size * (devicePixelRatio || 1))));
     return url.toString();
+}
+
+/** shortcuts from a JSON list (`[{ name, url }]` or `{ shortcuts: [...] }`) or plain text, one `[name] url` per line */
+export function parseShortcuts(text: string): Shortcut[] {
+    const make = (title: string | undefined, raw: unknown) => {
+        const url = typeof raw === "string" ? normalizeUrl(raw) : null;
+        if (!url) return [];
+        return [{ title: title?.trim() || new URL(url).hostname.replace(/^www\./, ""), url }];
+    };
+    let json: unknown;
+    try {
+        json = JSON.parse(text);
+    } catch {
+        return text.split("\n").flatMap((line) => {
+            const [first, ...rest] = line.trim().split(/\s+/);
+            return rest.length ? make(first, rest.at(-1)) : make(undefined, first);
+        });
+    }
+    const list = Array.isArray(json) ? json : Array.isArray((json as { shortcuts?: unknown })?.shortcuts) ? (json as { shortcuts: unknown[] }).shortcuts : [];
+    return list.flatMap((x: { title?: string; name?: string; url?: unknown }) => make(x?.title || x?.name, x?.url));
 }

@@ -10,5 +10,7 @@ export default defineConfig({
         // extension pages: no inline scripts, no remote assets
         modulePreload: false,
         assetsInlineLimit: 0,
+        // only ever runs in a current Chromium
+        target: "chrome120",
     },
 });

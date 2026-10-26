@@ -1,7 +1,8 @@
 <script lang="ts">
+    import { t } from "./i18n";
     import { onMount } from "svelte";
     import { drop, morphPage, pop, recede, reveal } from "./motion";
-    import { forceDark } from "./scheme.svelte";
+    import { forceScheme, type Forced } from "./scheme.svelte";
     import { perms } from "./permissions.svelte";
     import {
         Button,
@@ -14,11 +15,14 @@
     } from "@imput/helium-prism";
     import { resolveBang, resolveBangAsync, suggestBangs } from "./bangs.svelte";
     import Stars from "./Stars.svelte";
-    import Settings from "./Settings.svelte";
+    import WeatherBg, { skyFor, type Sky } from "./WeatherBg.svelte";
+    import ImageBg from "./ImageBg.svelte";
+    import { lookAt } from "./wallpaper.svelte";
     import Shortcuts from "./Shortcuts.svelte";
     import SiteIcon from "./SiteIcon.svelte";
     import WeatherIcon from "./WeatherIcon.svelte";
     import { describe, getWeather, peekWeather, type Weather } from "./weather";
+    import { holdGreeting } from "./greetings";
     import {
         loadCached,
         load,
@@ -29,12 +33,30 @@
     } from "./storage.svelte";
     import {
         applyBrowserTheme,
+        hasFileAccess,
         clearBrowserTheme,
         onSchemeChange,
         refreshBrowserTheme,
     } from "./theme";
 
     let settings: SettingsData = $state(loadCached());
+
+    // decided before the first paint, and kept for an hour so new tabs don't reroll it
+    const greeting = (() => {
+        let raw: string | null = null;
+        let saved = null;
+        try {
+            raw = localStorage.getItem("greeting");
+            saved = JSON.parse(raw ?? "null");
+        } catch {}
+        const g = holdGreeting(new Date(), saved);
+        const next = JSON.stringify(g.held);
+        try {
+            if (next !== raw) localStorage.setItem("greeting", next);
+        } catch {}
+        return g.text;
+    })();
+    let addingShortcuts = $state(false);
     let ready = $state(false);
     let query = $state("");
     let now = $state(new Date());
@@ -43,6 +65,12 @@
     let shimmer: { emphasize: () => void } | undefined = $state();
 
     const emphasize = () => shimmer?.emphasize();
+
+    // panels load on first use, not with every new tab; hovering the corner fetches ahead
+    let settingsView: Promise<typeof import("./Settings.svelte")> | undefined;
+    let addView: Promise<typeof import("./AddShortcuts.svelte")> | undefined;
+    const loadSettings = () => (settingsView ??= import("./Settings.svelte"));
+    const loadAdd = () => (addView ??= import("./AddShortcuts.svelte"));
 
 
     // picked once per tab
@@ -59,17 +87,30 @@
                 : settings.tintColor,
     );
 
-    // The starfield forces Prism's dark colors. On load that happens right away; when
-    // switching, every color eases over in step with the background reveal.
-    forceDark(bg === "stars");
+    // The starfield forces Prism's dark colors, a picture whichever scheme reads best on it
+    // (wallpaper.svelte.ts). On load that happens right away; when switching, every color
+    // eases over in step with the background reveal.
+    const look = $derived(bg === "image" ? lookAt(settings.imageBlur) : null);
+    const mode: Forced = $derived(
+        look ? (look.light ? "light" : "dark") : bg === "stars" || bg === "weather" ? "dark" : null,
+    );
+    const root = document.documentElement;
+    const picture = (on: typeof look) => {
+        root.toggleAttribute("data-picture", !!on);
+        root.style.setProperty("--halo", String(on?.halo ?? 0));
+    };
+    forceScheme(mode);
+    picture(look);
     if (settings.browserTheme) refreshBrowserTheme();
     let darkBg = bg;
     $effect(() => {
         const switching = bg !== darkBg;
         darkBg = bg;
-        const dark = bg === "stars";
+        const [next, nextLook] = [mode, look];
         const apply = () => {
-            forceDark(dark, switching ? 1100 : 0);
+            // a new picture may flip the scheme: ease that too
+            forceScheme(next, switching ? 1100 : 600);
+            picture(nextLook);
             if (settings.browserTheme && refreshBrowserTheme()) themeVersion++;
         };
         // a frame later, so the outgoing wallpaper has captured its own colors first
@@ -86,9 +127,27 @@
         return from === "stars" && bg === "shimmer" ? drop(node) : reveal(node);
     }
 
+    // the column hugs one edge of the page instead of the center
+    const side = $derived(
+        settings.align === "left" ? "flex-start" : settings.align === "right" ? "flex-end" : undefined,
+    );
+
+    // #sky-rain or #sky-snow-13 shows that sky (at that hour) right away: for trying
+    // the weather wallpaper out and for the showcase clips
+    const readSkyHash = () => {
+        const m = location.hash.match(/^#sky-([a-z]+)(?:-(\d+))?$/);
+        return m ? { sky: m[1] as Sky, hour: m[2] ? Number(m[2]) : undefined } : null;
+    };
+    let skyPreview = $state(readSkyHash());
+    onMount(() => {
+        const onHash = () => (skyPreview = readSkyHash());
+        addEventListener("hashchange", onHash);
+        return () => removeEventListener("hashchange", onHash);
+    });
+
     // the page UI rises in after the star entrance (see Stars.svelte)
     const starsEntrance =
-        bg === "stars" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        bg === "stars" && settings.intro && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let starsArrived = $state(!starsEntrance);
     if (starsEntrance) setTimeout(() => (starsArrived = true), 1000); // never stay hidden
 
@@ -104,15 +163,22 @@
 
     // bumped to remount the shimmer, which only reads its colors on mount
     let themeVersion = $state(0);
-    let themeUnreadable = $state(false);
+    // where browser colors come from: the policy, the color picked in settings, or nowhere yet
+    let themeSource: "policy" | "own" | "no-access" | "no-policy" | null = $state(null);
 
     let themeToggled = false;
 
     async function syncTheme() {
         if (!settings.browserTheme) return;
-        const changed = await applyBrowserTheme();
-        themeUnreadable = changed === null;
-        if (changed) themeVersion++;
+        const result = await applyBrowserTheme(settings.themeColor);
+        themeSource = result
+            ? result.fromPolicy
+                ? "policy"
+                : "own"
+            : (await hasFileAccess())
+              ? "no-policy"
+              : "no-access";
+        if (result?.changed) themeVersion++;
     }
 
     onMount(() => {
@@ -120,19 +186,33 @@
             settings = s;
             ready = true;
         });
-        const t = setInterval(() => (now = new Date()), 1000);
-        const onVisible = () => document.visibilityState === "visible" && syncTheme();
+        const onVisible = () => {
+            if (document.visibilityState !== "visible") return;
+            now = new Date();
+            syncTheme();
+        };
         document.addEventListener("visibilitychange", onVisible);
         const offScheme = onSchemeChange(syncTheme);
         return () => {
             offScheme();
-            clearInterval(t);
             document.removeEventListener("visibilitychange", onVisible);
         };
     });
 
     $effect(() => {
         if (ready) save(settings);
+    });
+
+    // the clock wakes up when its text changes: on the second, or only on the minute
+    $effect(() => {
+        const step = settings.seconds ? 1000 : 60000;
+        let t: ReturnType<typeof setTimeout>;
+        const tick = () => {
+            now = new Date();
+            t = setTimeout(tick, step - (Date.now() % step));
+        };
+        tick();
+        return () => clearTimeout(t);
     });
 
     $effect(() => {
@@ -142,7 +222,7 @@
             if (on) {
                 await syncTheme();
             } else {
-                themeUnreadable = false;
+                themeSource = null;
                 if (clearBrowserTheme()) themeVersion++;
             }
         };
@@ -150,6 +230,14 @@
         if (themeToggled) morphPage(run);
         else run();
         themeToggled = true;
+    });
+
+    // a newly picked color applies right away
+    let ownColor = settings.themeColor;
+    $effect(() => {
+        if (!ready || settings.themeColor === ownColor) return;
+        ownColor = settings.themeColor;
+        syncTheme();
     });
 
     const time = $derived(
@@ -252,9 +340,11 @@
         return () => clearTimeout(t);
     });
 
-    let weather: Weather | null = $state(
-        settings.weather ? peekWeather(settings.city, settings.fahrenheit) : null,
+    // fetched when the widget is on or the weather wallpaper needs it; shown only with the widget
+    let forecast: Weather | null = $state(
+        settings.weather || bg === "weather" ? peekWeather(settings.city, settings.fahrenheit) : null,
     );
+    const weather = $derived(settings.weather ? forecast : null);
     // last known list for the first frame, refreshed right after
     let top: Shortcut[] = $state(
         (() => {
@@ -269,9 +359,9 @@
     // debounced so typing a city doesn't fire a request per key
     $effect(() => {
         if (!ready) return;
-        if (!settings.weather) return (weather = null);
+        if (!settings.weather && bg !== "weather") return (forecast = null);
         const { city, fahrenheit } = settings;
-        const t = setTimeout(async () => (weather = await getWeather(city, fahrenheit)), 500);
+        const t = setTimeout(async () => (forecast = await getWeather(city, fahrenheit)), 500);
         return () => clearTimeout(t);
     });
 
@@ -281,7 +371,8 @@
         chrome.topSites.get((sites) => {
             top = sites.slice(0, 8).map(({ title, url }) => ({ title, url }));
             try {
-                localStorage.setItem("top-sites", JSON.stringify(top));
+                const json = JSON.stringify(top);
+                if (localStorage.getItem("top-sites") !== json) localStorage.setItem("top-sites", json);
             } catch {}
         });
     });
@@ -323,18 +414,26 @@
                 <GradientShimmer
                     bind:this={shimmer}
                     background
-                    intro={themeVersion === 0 && !bgSwitched}
+                    intro={settings.intro && themeVersion === 0 && !bgSwitched}
                     class="bg"
                 />
             {/key}
         {:else if bg === "stars"}
-            <Stars intro={!bgSwitched} onintro={() => (starsArrived = true)} />
+            <Stars intro={starsEntrance && !bgSwitched} onintro={() => (starsArrived = true)} />
+        {:else if bg === "image"}
+            <ImageBg blur={settings.imageBlur} />
+        {:else if bg === "weather"}
+            <WeatherBg
+                sky={skyPreview?.sky ?? (forecast ? skyFor(forecast.code) : "clear")}
+                hour={skyPreview?.hour ?? forecast?.hour}
+                brisk={!!skyPreview}
+            />
         {/if}
     </div>
 {/key}
 
 {#if (settings.clock || weather) && starsArrived && !settings.quiet}
-    <header class="datetime" transition:pop>
+    <header class={["datetime", side && "side"]} style:--align={side} transition:pop>
         {#if settings.clock}
             <span class="group" transition:pop>
                 <!-- a new format (12/24h, seconds) pops in instead of jumping -->
@@ -376,11 +475,11 @@
                         </div>
                         <div class="wd-place">{[w.place, w.country].filter(Boolean).join(", ")}</div>
                         <dl>
-                            {#if w.feels !== undefined}<dt>Feels like</dt><dd>{w.feels}°</dd>{/if}
-                            {#if w.high !== undefined && w.low !== undefined}<dt>High / low</dt><dd>{w.high}° / {w.low}°</dd>{/if}
-                            {#if w.rain !== undefined}<dt>Precipitation</dt><dd>{w.rain}%</dd>{/if}
-                            {#if w.humidity !== undefined}<dt>Humidity</dt><dd>{w.humidity}%</dd>{/if}
-                            {#if w.wind !== undefined}<dt>Wind</dt><dd>{w.wind} {w.unit === "F" ? "mph" : "km/h"}</dd>{/if}
+                            {#if w.feels !== undefined}<dt>{t("feels_like")}</dt><dd>{w.feels}°</dd>{/if}
+                            {#if w.high !== undefined && w.low !== undefined}<dt>{t("high_low")}</dt><dd>{w.high}° / {w.low}°</dd>{/if}
+                            {#if w.rain !== undefined}<dt>{t("precipitation")}</dt><dd>{w.rain}%</dd>{/if}
+                            {#if w.humidity !== undefined}<dt>{t("humidity")}</dt><dd>{w.humidity}%</dd>{/if}
+                            {#if w.wind !== undefined}<dt>{t("wind")}</dt><dd>{w.wind} {w.unit === "F" ? "mph" : "km/h"}</dd>{/if}
                         </dl>
                     </div>
                 {/snippet}
@@ -393,12 +492,18 @@
 
 <main
     style:--below="{belowH}px"
-    class={["shell", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
+    style:--align={side}
+    class={["shell", side && "side", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
     <!-- fixed box: both variants swap in place without moving the search -->
     <div class="logo">
-        {#key settings.logoText}
+        {#key settings.logo}
             <div class="logo-variant" transition:pop>
-                {#if settings.logoText}
+                {#if settings.logo === "greeting"}
+                    <div class="greeting">
+                        <HeliumLogo height="40px" />
+                        <p dir="auto">{greeting}</p>
+                    </div>
+                {:else if settings.logo === "wordmark"}
                     <HeliumLogo height="44px" text />
                 {:else}
                     <HeliumLogo height="56px" />
@@ -416,9 +521,9 @@
             onkeydown={onSearchKey}
             width="100%"
             type="search"
-            aria-label="Search"
+            aria-label={t("search")}
             aria-describedby="search-service"
-            placeholder={keyword && bang ? `Search ${bang.service}` : "Search or enter address"}
+            placeholder={keyword && bang ? t("search_service", { service: bang.service }) : t("search_or_enter_address")}
             autocomplete="off"
             spellcheck="false"
             enterkeyhint="search"
@@ -445,7 +550,7 @@
         </Input>
 
         {#if bangSuggestions.length}
-            <ul class="bang-list" role="listbox" aria-label="Bangs" transition:pop={{ from: 0.96, duration: 150 }}>
+            <ul class="bang-list" role="listbox" aria-label={t("bangs")} transition:pop={{ from: 0.96, duration: 150 }}>
                 {#each bangSuggestions as item, i (item.trigger + item.service)}
                     <li role="option" aria-selected={i === bangIndex}>
                         <button
@@ -481,7 +586,7 @@
                 contained={settings.iconStyle === "contained"}
                 titles={settings.shortcutTitles}
                 {tint}
-                label="Shortcuts"
+                label={t("shortcuts")}
                 onchange={emphasize}
             />
             </div>
@@ -489,7 +594,7 @@
         {#if settings.topSites && top.length && !settings.quiet}
             <div class="row most-visited" transition:pop={{ from: 0.96, duration: 200 }}>
                 {#if settings.shortcuts}
-                    <div class="divider" aria-hidden="true"><span>Most visited</span></div>
+                    <div class="divider" aria-hidden="true"><span>{t("most_visited")}</span></div>
                 {/if}
             <Shortcuts
                 items={top}
@@ -497,20 +602,20 @@
                 contained={settings.iconStyle === "contained"}
                 titles={settings.shortcutTitles}
                 {tint}
-                label="Most visited"
+                label={t("most_visited")}
             />
             </div>
         {/if}
     </div>
 </main>
 
-<div class={["corner", settingsOpen && "open"]}>
+<div class={["corner", settingsOpen && "open"]} onpointerenter={loadSettings} onfocusin={loadSettings}>
     <Button
         circle
         transparent
         selected={settings.quiet}
-        aria-label={settings.quiet ? "Show everything" : "Focus mode"}
-        title={settings.quiet ? "Show everything" : "Focus mode: just the search"}
+        aria-label={settings.quiet ? t("show_everything") : t("focus_mode")}
+        title={settings.quiet ? t("show_everything") : t("focus_mode_just_the")}
         onclick={() => {
             settings.quiet = !settings.quiet;
             emphasize();
@@ -530,7 +635,7 @@
         circle
         transparent
         selected={settingsOpen}
-        aria-label="Settings"
+        aria-label={t("settings")}
         onclick={() => {
             settingsOpen = !settingsOpen;
             emphasize();
@@ -541,14 +646,26 @@
 </div>
 
 {#if settingsOpen}
-    <Settings
-        bind:settings
-        {themeVersion}
-        {themeUnreadable}
-        {emphasize}
-        glass={bg !== "none"}
-        onclose={() => (settingsOpen = false)}
-    />
+    {#await loadSettings() then { default: Settings }}
+        <Settings
+            bind:settings
+            {themeSource}
+            {emphasize}
+            glass={bg !== "none"}
+            onclose={() => (settingsOpen = false)}
+            onaddshortcuts={() => (addingShortcuts = true)}
+        />
+    {/await}
+{/if}
+
+{#if addingShortcuts}
+    {#await loadAdd() then { default: AddShortcuts }}
+        <AddShortcuts
+            bind:items={settings.links}
+            onchange={emphasize}
+            onclose={() => (addingShortcuts = false)}
+        />
+    {/await}
 {/if}
 
 <style>
@@ -650,6 +767,37 @@
         place-items: center;
     }
 
+    .greeting {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        max-width: calc(100vw - 32px);
+    }
+
+    .greeting p {
+        margin: 0;
+        color: inherit; /* the wordmark's color, not Prism's muted paragraph */
+        font-size: clamp(22px, 6.5vw, 30px);
+        font-weight: 500;
+        letter-spacing: -0.02em;
+        line-height: 1.1;
+        text-wrap: balance;
+    }
+
+    /* the words settle in a beat after the mark, like a tooltip popping in */
+    @media (prefers-reduced-motion: no-preference) {
+        .greeting p {
+            animation: greet 0.35s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+        }
+    }
+
+    @keyframes greet {
+        from {
+            opacity: 0;
+            scale: 0.92;
+        }
+    }
+
     .shell {
         position: relative;
         z-index: 1;
@@ -663,6 +811,32 @@
            logo + search + gap. */
         padding: max(48px, min(calc(50vh - 90px), calc(50vh - (160px + var(--below, 0px)) / 2)))
             16px 96px;
+    }
+
+    /* to one side: everything lines up along the column's edge */
+    .shell.side {
+        align-items: var(--align);
+        padding-inline: max(16px, 8vw);
+    }
+
+    .shell.side .logo,
+    .shell.side .logo-variant {
+        justify-items: var(--align);
+    }
+
+    .shell.side .below,
+    .shell.side .most-visited {
+        align-items: var(--align);
+    }
+
+    .shell.side .row,
+    .shell.side :global(.shortcuts) {
+        justify-content: var(--align);
+    }
+
+    .datetime.side {
+        justify-content: var(--align);
+        padding-inline: max(16px, 8vw);
     }
 
     .shell.settled {
@@ -696,6 +870,15 @@
         pointer-events: none;
     }
 
+    :global(:root[data-picture]) .datetime,
+    :global(:root[data-picture]) .divider {
+        text-shadow: var(--text-halo);
+    }
+
+    :global(:root[data-picture]) .wi {
+        filter: drop-shadow(0 0 2px var(--halo-ink));
+    }
+
     .date::first-letter {
         text-transform: uppercase;
     }
@@ -727,6 +910,7 @@
     }
 
     .weather-details {
+        text-shadow: none;
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -793,6 +977,15 @@
            stacking context, so the bang list's z-index alone can't escape the form */
         z-index: 10;
         width: min(100%, 600px);
+    }
+
+    /* on a bright picture the glass field takes on the halo too, so its placeholder holds */
+    :global(:root[data-picture]) .search :global(.input-field) {
+        background-color: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-7));
+    }
+
+    :global(:root[data-picture]) .search :global(.input-field:is(:hover, :focus-within)) {
+        background-color: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-10));
     }
 
     /* bang autocomplete, same surface as the settings panel */

@@ -41,6 +41,42 @@ svg {
     --glass-filter: blur(12px);
 }
 
+:root[data-light] {
+    color-scheme: light;
+
+    --primary: #0d1c64;
+    --secondary: #475a7f;
+    --tertiary: #646f9a;
+    --white: #ffffff;
+
+    --tooltip-bg: #eaedfd;
+    --tooltip-shadow: color-mix(in srgb, #9ba6d8 50%, transparent);
+
+    --bg-surface: #fbfcff;
+    --bg-gradient-start: #f4f7ff;
+    --bg-gradient-end: #acbbff;
+    --intro-gradient-start: #e3e8ff;
+    --intro-gradient-end: #f4f7ff;
+
+    --helium-elevated: #3450d1;
+    --glass-filter: blur(12px) saturate(110%);
+}
+
+/* On a picture (App.svelte, wallpaper.svelte.ts) dim text is a step closer to --primary,
+   and text right on the picture gets a halo of the veil color where the veil alone can't
+   hold 4.5:1; --halo is how much. The root copies resolve the browser palette too. */
+:root[data-picture] {
+    --picture-secondary: var(--secondary);
+    --picture-tertiary: var(--tertiary);
+    --halo-ink: color-mix(in srgb, var(--background) min(100%, var(--halo, 0) * 200%), transparent);
+    --text-halo: 0 0 1px var(--halo-ink), 0 0 2px var(--halo-ink), 0 0 4px var(--halo-ink), 0 0 10px var(--halo-ink);
+}
+
+:root[data-picture] body {
+    --secondary: color-mix(in oklab, var(--picture-secondary) 60%, var(--primary));
+    --tertiary: color-mix(in oklab, var(--picture-tertiary) 50%, var(--primary));
+}
+
 /* page-wide palette changes (motion.ts morphPage), Prism timing */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -48,7 +84,7 @@ svg {
     animation-timing-function: ease;
 }
 
-/* colors ease to a new scheme during a background switch (scheme.svelte.ts forceDark) */
+/* colors ease to a new scheme during a background switch (scheme.svelte.ts forceScheme) */
 :root[data-recolor] *:not(.bg-layer),
 :root[data-recolor] *::before,
 :root[data-recolor] *::after {

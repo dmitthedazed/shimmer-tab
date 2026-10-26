@@ -10,6 +10,7 @@ and no server of its own. Nothing you do on the page is sent to the developer.
 - **Settings and shortcuts** are saved with `chrome.storage.sync`, so your browser can sync
   them between your own devices if you use browser sync. A copy is kept in local storage so
   the page draws correctly on its first frame.
+- **Your wallpaper picture or GIF** is stored in this browser only (IndexedDB, plus a few brightness numbers measured from it in localStorage); it is never uploaded or synced.
 - **Icon, weather and top sites caches** are kept in local storage on your device.
 - **Most visited sites** (optional) are read from your browser with the `topSites` API and
   only shown on the page. They are never sent anywhere.
@@ -21,7 +22,7 @@ The page talks to third parties only to show what you asked for:
 
 | When | Request goes to | What it sends |
 |---|---|---|
-| Weather is turned on | [Open-Meteo](https://open-meteo.com) (geocoding and forecast APIs) | The city name you typed and its coordinates; no device location is used |
+| Weather is turned on, or the weather wallpaper is picked | [Open-Meteo](https://open-meteo.com) (geocoding and forecast APIs) | The city name you typed and its coordinates; no device location is used |
 | A shortcut's logo is shown | [svgl.app](https://svgl.app) | Which logo file to download (for example `github_dark.svg`) |
 | "Icons for every site" is turned on | The websites in your shortcuts and most visited list | A normal request for the site's page, web app manifest and icon files, without cookies |
 | You search | Your browser's default search engine, or the site of a bang you used | Your search text, the same as searching from the address bar |

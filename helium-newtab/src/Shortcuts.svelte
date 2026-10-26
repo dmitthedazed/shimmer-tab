@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { t } from "./i18n";
     import { Button, Input, Text } from "@imput/helium-prism";
     import { flip } from "svelte/animate";
     import { cubicOut } from "svelte/easing";
@@ -137,7 +138,7 @@
                 {/if}
             </a>
             {#if !readonly}
-                <button type="button" class="circle edit" aria-label="Edit {item.title}" onclick={() => open(i)}>
+                <button type="button" class="circle edit" aria-label={t("edit_name", { name: item.title })} onclick={() => open(i)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
                 </button>
             {/if}
@@ -151,7 +152,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
                 </span>
                 {#if titles}
-                    <span class="title" transition:collapse>Add</span>
+                    <span class="title" transition:collapse>{t("add")}</span>
                 {/if}
             </button>
         </div>
@@ -161,8 +162,8 @@
 {#if editing !== null}
     <div class="scrim" role="presentation" onclick={close} transition:pop={{ from: 1 }}></div>
     <form class="dialog" onsubmit={submit} transition:pop>
-        <Text variant="subheading">{editing >= 0 ? "Edit shortcut" : "Add shortcut"}</Text>
-        <Input bind:value={title} aria-label="Name" placeholder="Name" />
+        <Text variant="subheading">{editing >= 0 ? t("edit_shortcut") : t("add_shortcut")}</Text>
+        <Input bind:value={title} aria-label={t("name")} placeholder={t("name")} />
         <Input
             bind:value={url}
             bind:input={urlInput}
@@ -173,11 +174,11 @@
         />
         <div class="actions">
             {#if editing >= 0}
-                <Button transparent onclick={() => remove(editing!)}>Remove</Button>
+                <Button transparent onclick={() => remove(editing!)}>{t("remove")}</Button>
             {/if}
             <span class="spacer"></span>
-            <Button onclick={close}>Cancel</Button>
-            <Button primary type="submit" disabled={!normalizeUrl(url)}>Save</Button>
+            <Button onclick={close}>{t("cancel")}</Button>
+            <Button primary type="submit" disabled={!normalizeUrl(url)}>{t("save")}</Button>
         </div>
     </form>
 {/if}
@@ -253,6 +254,19 @@
 
     .add {
         color: var(--tertiary);
+    }
+
+    :global(:root[data-picture]) .title {
+        text-shadow: var(--text-halo);
+    }
+
+    /* the plate under "+" darkens with the halo, so the icon holds on a bright picture */
+    :global(:root[data-picture]) .add-icon {
+        background: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-7));
+    }
+
+    :global(:root[data-picture]) .add:hover .add-icon {
+        background: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-10));
     }
 
     .add-icon {

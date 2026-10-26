@@ -78,6 +78,7 @@ export async function connect() {
                 await chrome.storage.sync.set({ settings: ${JSON.stringify(settings)} });
                 localStorage.setItem('settings-mirror', ${JSON.stringify(JSON.stringify(settings))});
                 localStorage.setItem('settings-tab', ${JSON.stringify(tab)});
+                localStorage.removeItem('svgl-rest'); // a hiccup must not cost a whole run its logos
             })()`);
             await api.open();
             await sleep(wait);
@@ -183,8 +184,10 @@ export const baseSettings = {
     seconds: false,
     browserTheme: false,
     bangs: true,
-    logoText: true,
+    logo: "greeting",
+    align: "center",
     quiet: false,
+    intro: true,
     shortcuts: true,
     lockShortcuts: false,
     shortcutTitles: true,

@@ -1,5 +1,6 @@
 // Motion borrowed from Prism: its Tooltip scales in from 0.8 with a fade in 0.15s,
 // its CopyIcon swaps icons by scaling them, buttons press to 0.97 in 0.2s.
+import { tick } from "svelte";
 import { cubicOut } from "svelte/easing";
 
 /** Tooltip-style appear/disappear. */
@@ -143,7 +144,6 @@ export function recede(node: Element, { duration = 1100 } = {}) {
 export async function morphPage(update: () => unknown) {
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (!document.startViewTransition || reduce) return update();
-    const { tick } = await import("svelte");
     await document.startViewTransition(async () => {
         await update();
         await tick();

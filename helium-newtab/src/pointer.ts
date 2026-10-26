@@ -1,6 +1,7 @@
 // Smoothed pointer position for cursor-reactive backgrounds, exposed as CSS variables on
 // :root: --mx/--my in -1..1 from the center, --px/--py in pixels. Eases towards the
-// pointer and stops animating once it has caught up. Off for touch and reduced motion.
+// pointer and stops animating once it has caught up. Off for touch and reduced motion,
+// and while no background listens (see trackPointer): every write restyles the page.
 const root = document.documentElement;
 const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
 const fine = window.matchMedia("(pointer: fine)");
@@ -8,6 +9,13 @@ const fine = window.matchMedia("(pointer: fine)");
 let tx = innerWidth / 2, ty = innerHeight / 2;
 let x = tx, y = ty;
 let frame = 0;
+let users = 0;
+
+/** Called by a background that reads the variables; returns its release. */
+export function trackPointer() {
+    users++;
+    return () => void users--;
+}
 
 function step() {
     x += (tx - x) * 0.08;
@@ -22,7 +30,7 @@ function step() {
 window.addEventListener(
     "pointermove",
     (e) => {
-        if (reduce.matches || !fine.matches || e.pointerType === "touch") return;
+        if (!users || reduce.matches || !fine.matches || e.pointerType === "touch") return;
         tx = e.clientX;
         ty = e.clientY;
         if (!frame) frame = requestAnimationFrame(step);

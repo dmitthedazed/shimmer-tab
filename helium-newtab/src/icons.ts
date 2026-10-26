@@ -1,4 +1,4 @@
-import { canReadSites } from "./permissions.svelte";
+import { canReadSites, WEB } from "./permissions.svelte";
 
 // High-res site icons. The browser's favicon cache only has 16–32px icons, so we look
 // for what the site offers for home screens instead: web app manifest icons, apple-touch-icon,
@@ -299,7 +299,10 @@ async function resolve(site: string): Promise<SiteIcon> {
 
 // Vector logos for popular services from svgl (scripts/refresh-svg-icons.mjs).
 type SvgEntry = { p: string; s?: string; l?: string; d?: string };
-const SVGL = "https://svgl.app/library/";
+// svgl.app sends no CORS headers, so the web page reads the same files from its repo
+const SVGL = WEB
+    ? "https://cdn.jsdelivr.net/gh/pheralb/svgl@main/static/library/"
+    : "https://svgl.app/library/";
 let svgMap: Promise<Record<string, SvgEntry[]>> | undefined;
 
 function loadSvgMap() {
@@ -360,6 +363,22 @@ async function resolveSvg(entry: SvgEntry): Promise<SiteIcon | null> {
     }
 }
 
+// svgl unreachable (offline, down, blocked): leave it alone for a few minutes instead of
+// asking again on every tab
+const SVGL_REST = "svgl-rest";
+const svglResting = () => {
+    try {
+        return Date.now() - Number(localStorage.getItem(SVGL_REST)) < 10 * 60 * 1000;
+    } catch {
+        return false;
+    }
+};
+const restSvgl = () => {
+    try {
+        localStorage.setItem(SVGL_REST, String(Date.now()));
+    } catch {}
+};
+
 /** Cached HQ icon for a site; resolves to src "" when the site has none. */
 export function siteIcon(url: string): Promise<SiteIcon> {
     const site = origin(url);
@@ -368,7 +387,7 @@ export function siteIcon(url: string): Promise<SiteIcon> {
     if (pending) return pending;
 
     pending = (async () => {
-        const svg = await findSvg(url);
+        const svg = svglResting() ? null : await findSvg(url);
         if (svg) {
             const key = SVG_PREFIX + (svg.s ?? svg.l);
             const cached = await readCache(key);
@@ -378,6 +397,7 @@ export function siteIcon(url: string): Promise<SiteIcon> {
                 await writeCache(key, icon);
                 return icon;
             }
+            restSvgl();
         }
 
         const key = PREFIX + site;

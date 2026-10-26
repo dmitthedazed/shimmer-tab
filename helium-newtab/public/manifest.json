@@ -1,9 +1,9 @@
 {
     "manifest_version": 3,
-    "name": "Shimmer Tab for Helium",
-    "short_name": "Shimmer Tab",
-    "version": "1.0.0",
-    "description": "A Helium-styled new tab page: flowing wallpapers, bangs with autocomplete and crisp shortcut icons.",
+    "name": "__MSG_name__",
+    "short_name": "__MSG_short_name__",
+    "version": "1.1.0",
+    "description": "__MSG_description__",
     "chrome_url_overrides": {
         "newtab": "index.html"
     },
@@ -28,5 +28,6 @@
         "https://*/*",
         "http://*/*",
         "file:///etc/chromium/policies/*"
-    ]
+    ],
+    "default_locale": "en"
 }

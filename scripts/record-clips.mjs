@@ -9,6 +9,7 @@ const { sleep } = r;
 const sw = (name) => r.byText("[role=switch]", name);
 const tab = (name) => r.byText("header .segmented button", name);
 const bgTile = (name) => r.byText(".bg-option", name);
+const seg = (name) => r.byText(".segmented button", name);
 const gear = `document.querySelector('[aria-label="Settings"]')`;
 
 const clips = {
@@ -65,6 +66,8 @@ const clips = {
         await sleep(1350);
         await r.clickEl(bgTile("Stars"), 300);
         await sleep(1450);
+        await r.clickEl(bgTile("Weather"), 300);
+        await sleep(1600);
         await r.clickEl(bgTile("None"), 300);
         await sleep(1250);
         await r.clickEl(bgTile("Shimmer"), 300);
@@ -117,12 +120,49 @@ const clips = {
         await sleep(450);
         await r.clickEl(tab("Look"), 330);
         await sleep(450);
-        await r.clickEl(sw("Logo text"), 350);
+        await r.clickEl(seg("Helium"), 350);
         await sleep(600);
-        await r.clickEl(sw("Logo text"), 300);
+        await r.clickEl(seg("Greeting"), 300);
         await sleep(600);
         await r.click(220, 560, 450);
         await sleep(600);
+    },
+
+    // the page slides to either side, then the logo cycles greeting → wordmark → mark
+    async layout(dir) {
+        await r.setup({ ...base, background: "shimmer" });
+        r.start(dir);
+        await sleep(150);
+        for (const side of ["Left", "Right", "Center"]) {
+            await r.clickEl(gear, 380);
+            await sleep(450);
+            await r.clickEl(seg(side), 330);
+            await sleep(300);
+            await r.key("Escape", 27);
+            await sleep(1100);
+        }
+        await r.clickEl(gear, 380);
+        await sleep(450);
+        for (const logo of ["Helium", "None", "Greeting"]) {
+            await r.clickEl(seg(logo), 330);
+            await sleep(650);
+        }
+        await r.key("Escape", 27);
+        await sleep(700);
+    },
+
+    // the live sky through every kind of weather, then into the night
+    async weather(dir) {
+        await r.setup({ ...base, background: "weather" });
+        await r.ev(`location.hash = "sky-clear-13"; location.reload()`);
+        await sleep(3000);
+        r.start(dir);
+        await sleep(500);
+        for (const sky of ["overcast-13", "rain-13", "thunderstorm-13", "snow-12", "fog-9", "fair-17", "clear-21"]) {
+            await r.ev(`location.hash = "sky-${sky}"`);
+            await sleep(1100);
+        }
+        await sleep(400);
     },
 
     // weather details, then focus mode strips the page to the search bar

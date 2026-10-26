@@ -1,17 +1,26 @@
-<script lang="ts">
-    // Color choice for single-color icons: theme colors, a few presets and a custom one.
-    let { value = $bindable(), onchange }: { value: string; onchange?: () => void } = $props();
-
-    const presets = [
-        { value: "accent", label: "Accent", color: "var(--helium-elevated)" },
-        { value: "text", label: "Text", color: "var(--primary)" },
-        { value: "#e5484d", label: "Red", color: "#e5484d" },
-        { value: "#f5a524", label: "Amber", color: "#f5a524" },
-        { value: "#30a46c", label: "Green", color: "#30a46c" },
-        { value: "#8e4ec6", label: "Purple", color: "#8e4ec6" },
+<script lang="ts" module>
+    import { t } from "./i18n";
+    // Color choice: a few presets and a custom one (icon tint by default).
+    const iconPresets = [
+        { value: "accent", label: t("accent"), color: "var(--helium-elevated)" },
+        { value: "text", label: t("text"), color: "var(--primary)" },
+        { value: "#e5484d", label: t("red"), color: "#e5484d" },
+        { value: "#f5a524", label: t("amber"), color: "#f5a524" },
+        { value: "#30a46c", label: t("green"), color: "#30a46c" },
+        { value: "#8e4ec6", label: t("purple"), color: "#8e4ec6" },
     ];
+</script>
 
-    const custom = $derived(!presets.some((p) => p.value === value));
+<script lang="ts">
+    type Preset = { value: string; label: string; color: string };
+    let {
+        value = $bindable(),
+        onchange,
+        presets = iconPresets,
+        label = t("icon_color"),
+    }: { value: string; onchange?: () => void; presets?: Preset[]; label?: string } = $props();
+
+    const custom = $derived(!!value && !presets.some((p) => p.value === value));
 
     function pick(v: string) {
         value = v;
@@ -19,7 +28,7 @@
     }
 </script>
 
-<div class="swatches" role="radiogroup" aria-label="Icon color">
+<div class="swatches" role="radiogroup" aria-label={label}>
     {#each presets as preset (preset.value)}
         <button
             type="button"
@@ -35,11 +44,11 @@
     <label
         class={["swatch", "custom", custom && "active"]}
         style:--swatch={custom ? value : undefined}
-        title="Custom"
+        title={t("custom")}
     >
         <input
             type="color"
-            aria-label="Custom color"
+            aria-label={t("custom_color")}
             value={custom ? value : "#3450d1"}
             oninput={(e) => pick(e.currentTarget.value)}
         />
