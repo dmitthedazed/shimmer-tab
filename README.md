@@ -127,8 +127,8 @@ needs the `<all_urls>` host permission.
 short 1080p60 clips of the page into `previews/clips/` (needs ffmpeg and a GPU).
 
 `pnpm pages` builds the web version into the `gh-pages` branch (`--push` to publish), and
-publishing a GitHub release runs `.github/workflows/release.yml`: it attaches the zip,
-uploads it to the Chrome Web Store and refreshes Pages.
+publishing a GitHub release runs `.github/workflows/release.yml`: it attaches the zip and
+refreshes Pages.
 
 ## Credits
 

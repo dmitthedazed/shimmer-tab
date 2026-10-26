@@ -9,5 +9,3 @@ previews/**/*.mp4
 store/
 helium-newtab/dist-web
 
-# API keys for scripts/setup-secrets.mjs, never committed
-secrets.env

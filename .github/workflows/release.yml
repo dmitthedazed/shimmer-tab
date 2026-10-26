@@ -1,7 +1,5 @@
-# On a published GitHub release: build the extension, attach the zip to the release,
-# upload it to the Chrome Web Store and submit it for review, then refresh GitHub Pages.
-# Secrets: CWS_CLIENT_ID, CWS_CLIENT_SECRET, CWS_REFRESH_TOKEN, CWS_EXTENSION_ID, CWS_PUBLISHER_ID
-# (see https://github.com/fregante/chrome-webstore-upload-keys).
+# On a published GitHub release: build the extension, attach the zip to the release (upload
+# it to the Chrome Web Store dashboard by hand), then refresh GitHub Pages.
 name: Release
 
 on:
@@ -42,15 +40,6 @@ jobs:
               env:
                   GH_TOKEN: ${{ github.token }}
               run: gh release upload "${{ github.event.release.tag_name }}" "$ZIP" --clobber
-
-            - name: Chrome Web Store
-              env:
-                  EXTENSION_ID: ${{ secrets.CWS_EXTENSION_ID }}
-                  PUBLISHER_ID: ${{ secrets.CWS_PUBLISHER_ID }}
-                  CLIENT_ID: ${{ secrets.CWS_CLIENT_ID }}
-                  CLIENT_SECRET: ${{ secrets.CWS_CLIENT_SECRET }}
-                  REFRESH_TOKEN: ${{ secrets.CWS_REFRESH_TOKEN }}
-              run: npx -y chrome-webstore-upload-cli@4.0.2 --source "$ZIP"
 
             - name: GitHub Pages
               run: |
