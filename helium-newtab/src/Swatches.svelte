@@ -22,6 +22,14 @@
 
     const custom = $derived(!!value && !presets.some((p) => p.value === value));
 
+    // The browser opens its picker from the input's left edge and doesn't always keep it
+    // on screen (Wayland, fullscreen), so near the right edge the input reaches leftward.
+    let towardLeft = $state(false);
+    function aim(e: Event) {
+        const box = (e.currentTarget as HTMLElement).getBoundingClientRect();
+        towardLeft = box.left > innerWidth / 2;
+    }
+
     function pick(v: string) {
         value = v;
         onchange?.();
@@ -45,10 +53,13 @@
         class={["swatch", "custom", custom && "active"]}
         style:--swatch={custom ? value : undefined}
         title={t("custom")}
+        onpointerenter={aim}
+        onfocusin={aim}
     >
         <input
             type="color"
             aria-label={t("custom_color")}
+            class:toward-left={towardLeft}
             value={custom ? value : "#3450d1"}
             oninput={(e) => pick(e.currentTarget.value)}
         />
@@ -99,6 +110,13 @@
         height: 100%;
         opacity: 0;
         cursor: pointer;
+    }
+
+    /* the label still takes the clicks and passes them on */
+    .custom input.toward-left {
+        left: auto;
+        width: 240px;
+        pointer-events: none;
     }
 
     .swatch:focus-visible,

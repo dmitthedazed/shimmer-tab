@@ -1,5 +1,8 @@
 files:
+  # only translated strings land in the repo; the rest falls back to English at runtime
   - source: /helium-newtab/src/locales/en.json
     translation: /helium-newtab/src/locales/%two_letters_code%.json
+    skip_untranslated_strings: true
   - source: /helium-newtab/public/_locales/en/messages.json
     translation: /helium-newtab/public/_locales/%two_letters_code%/messages.json
+    skip_untranslated_strings: true

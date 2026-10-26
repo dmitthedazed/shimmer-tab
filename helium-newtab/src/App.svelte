@@ -132,6 +132,34 @@
         settings.align === "left" ? "flex-start" : settings.align === "right" ? "flex-end" : undefined,
     );
 
+    // A new side glides everything over instead of jumping: each piece is measured before
+    // the change and played back from where it was (FLIP). Only leaves move, so nothing
+    // gets its parent's shift twice.
+    const movers = () =>
+        document.querySelectorAll<HTMLElement>(
+            ".shell > :not(.below), .below .divider, .shortcuts > *, .datetime > *",
+        );
+    let before = new Map<HTMLElement, DOMRect>();
+    $effect.pre(() => {
+        settings.align;
+        before = new Map([...movers()].map((el) => [el, el.getBoundingClientRect()]));
+    });
+    $effect(() => {
+        settings.align;
+        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        for (const [el, was] of before) {
+            const now = el.getBoundingClientRect();
+            const dx = was.left - now.left;
+            const dy = was.top - now.top;
+            if (!el.isConnected || (Math.abs(dx) < 1 && Math.abs(dy) < 1)) continue;
+            el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
+                duration: 450,
+                easing: "cubic-bezier(0.3, 1, 0.5, 1)",
+                composite: "add",
+            });
+        }
+    });
+
     // #sky-rain or #sky-snow-13 shows that sky (at that hour) right away: for trying
     // the weather wallpaper out and for the showcase clips
     const readSkyHash = () => {
@@ -731,7 +759,7 @@
     }
 
     .shell.entrance:not(.waiting) > :global(*) {
-        animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+        animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     }
 
     .shell.entrance:not(.waiting) > :global(:nth-child(2)) {
