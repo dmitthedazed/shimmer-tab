@@ -10,6 +10,12 @@
 </p>
 
 <p align="center">
+    <a href="https://chromewebstore.google.com/detail/acgnlhjcipkagocfggidelbghodlddmm"><b>Chrome Web Store</b></a>
+    ·
+    <a href="https://dmitthedazed.github.io/shimmer-tab/"><b>Web version</b></a>
+</p>
+
+<p align="center">
     <img src="previews/gifs/warp.gif" alt="Opening a tab on the starfield: dropping out of hyperspace">
 </p>
 
@@ -89,6 +95,9 @@ tab page anywhere you can set one by URL. Settings stay in that browser's local 
 browser colors, most visited and reading sites' own icons need the extension.
 
 ## Install
+
+From the [Chrome Web Store](https://chromewebstore.google.com/detail/acgnlhjcipkagocfggidelbghodlddmm),
+or build it yourself:
 
 ```sh
 cd helium-newtab
