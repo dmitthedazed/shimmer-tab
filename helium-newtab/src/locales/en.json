@@ -346,5 +346,10 @@
     "big_clock": "Big clock",
     "big_clock_desc": "The time instead of the mark",
     "show_logo": "Show logo",
-    "show_logo_desc": "The mark above the search"
+    "show_logo_desc": "The mark above the search",
+    "show_search_bar": "Show search bar",
+    "show_search_bar_desc": "When off, it shows up as you type",
+    "about": "About",
+    "version": "Version {version}",
+    "made_by": "Made by"
 }

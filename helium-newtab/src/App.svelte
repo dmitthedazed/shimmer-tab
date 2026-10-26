@@ -307,6 +307,10 @@
         if (!settings.bangs) keyword = null;
     });
 
+    // a hidden search bar stays in place (so nothing jumps) and shows up while you type
+    let searchFocused = $state(false);
+    const searchTucked = $derived(!settings.searchShown && !searchFocused && !query);
+
     // Type-to-search: a printable key pressed anywhere outside a text field moves focus
     // into the search bar, and since focus moves during keydown the character lands there.
     function typeToSearch(e: KeyboardEvent) {
@@ -572,7 +576,7 @@
     </div>
     {/if}
 
-    <form class="search" onsubmit={search}>
+    <form class={["search", searchTucked && "tucked"]} onsubmit={search} onfocusin={() => (searchFocused = true)} onfocusout={() => (searchFocused = false)}>
         <!-- like Helium's omnibox keyword mode (and exsesx/helium-new-tab):
              service icon and name, then a divider before the query -->
         <Input
@@ -1087,6 +1091,16 @@
            stacking context, so the bang list's z-index alone can't escape the form */
         z-index: 10;
         width: min(100%, 600px);
+        transition:
+            opacity 0.25s,
+            scale 0.25s;
+    }
+
+    /* still focusable, so type-to-search can bring it back */
+    .search.tucked {
+        opacity: 0;
+        scale: 0.98;
+        pointer-events: none;
     }
 
     /* on a bright picture the glass field takes on the halo too, so its placeholder holds */

@@ -11,6 +11,8 @@ export type Settings = {
     /** seed for browser colors when no BrowserThemeColor policy is set (unmanaged browsers) */
     themeColor: string;
     bangs: boolean;
+    /** the search bar on the page; when off it shows up once you type */
+    searchShown: boolean;
     /** the logo above the search at all */
     logoShown: boolean;
     /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
@@ -45,6 +47,7 @@ export const defaults: Settings = {
     browserTheme: false,
     themeColor: "",
     bangs: true,
+    searchShown: true,
     logoShown: true,
     logo: "greeting",
     align: "center",

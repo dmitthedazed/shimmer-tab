@@ -2,7 +2,8 @@
     import { t } from "./i18n";
     import { untrack } from "svelte";
     import { cubicOut } from "svelte/easing";
-    import { IconCheck, Input, Text, Toggle } from "@imput/helium-prism";
+    import { IconCheck, Input, Link, Text, Toggle } from "@imput/helium-prism";
+    import { version } from "../package.json";
     import Row from "./Row.svelte";
     import { wallpaper, loadWallpaper, setWallpaper } from "./wallpaper.svelte";
     import Segmented from "./Segmented.svelte";
@@ -550,10 +551,23 @@
                     </Row>
                 </div>
             </section>
+
+            <section>
+                <h5>{t("about")}</h5>
+                <div class="list">
+                    <Row name="Shimmer Tab" desc={t("version", { version })}>
+                        <Link href="https://github.com/dmitthedazed/shimmer-tab">GitHub</Link>
+                    </Row>
+                    <Row name={t("made_by")} desc="Dmytrii Savin">
+                        <Link href="https://github.com/dmitthedazed">@dmitthedazed</Link>
+                    </Row>
+                </div>
+            </section>
         {:else}
             <section>
                 <h5>{t("search")}</h5>
                 <div class="list">
+                    <Toggle bind:checked={settings.searchShown} onchange={emphasize} name={t("show_search_bar")} desc={t("show_search_bar_desc")} />
                     <Toggle bind:checked={settings.bangs} onchange={emphasize} name={t("bangs")} desc={t("yt_cats_w_helium")} />
                 </div>
                 <p class="note">{t("everything_else_goes_to")}</p>
