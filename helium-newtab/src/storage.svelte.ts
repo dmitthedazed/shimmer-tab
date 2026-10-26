@@ -78,6 +78,13 @@ export function normalize(raw: Record<string, unknown> | null | undefined): Sett
     if (raw && !["greeting", "wordmark", "mark"].includes(raw.logo as string))
         settings.logo = Object.keys(raw).length ? (raw.logoText === false ? "mark" : "wordmark") : defaults.logo;
     delete (settings as { logoText?: boolean }).logoText;
+    // imported backups go through here too: only links that open as pages
+    if (Array.isArray(settings.links)) {
+        settings.links = settings.links.flatMap((link) => {
+            const url = typeof link?.url === "string" ? normalizeUrl(link.url) : null;
+            return url ? [{ title: String(link.title ?? ""), url }] : [];
+        });
+    } else settings.links = [...defaults.links];
     return settings;
 }
 
@@ -154,11 +161,15 @@ export function save(settings: Settings) {
     if (json !== stored) timer = setTimeout(flush, 500);
 }
 
+const SAFE_SCHEMES = ["http:", "https:", "chrome:", "about:"];
+
 export function normalizeUrl(input: string) {
     const s = input.trim();
     if (!s) return null;
     try {
-        return new URL(/^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`).toString();
+        const url = new URL(/^[a-z][a-z0-9+.-]*:/i.test(s) ? s : `https://${s}`);
+        // a pasted list or a backup must not slip in javascript: or data: links
+        return SAFE_SCHEMES.includes(url.protocol) ? url.toString() : null;
     } catch {
         return null;
     }
