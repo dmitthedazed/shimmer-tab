@@ -37,6 +37,8 @@
     "feels_like": "Feels like",
     "focus_mode": "Focus mode",
     "focus_mode_just_the": "Focus mode: just the search",
+    "fade_when_idle": "Fade when idle",
+    "shortcuts_and_the_top_bar": "Shortcuts and the top bar fade out until you move",
     "follow_the_browser_theme": "Follow the browser theme color",
     "format": "Format",
     "gif_too_big": "That GIF is over 25 MB. Pick a smaller one.",
