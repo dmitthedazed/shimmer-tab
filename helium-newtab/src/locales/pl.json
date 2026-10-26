@@ -1,0 +1,328 @@
+{
+    "12h": "12h",
+    "24h": "24h",
+    "accent": "Accent",
+    "add": "Add",
+    "add_shortcut": "Add shortcut",
+    "add_shortcuts": "Add shortcuts",
+    "allow_access_to_file": "Allow access to file URLs for this extension, or pick the color below",
+    "amber": "Amber",
+    "appearance": "Appearance",
+    "at_the_top_of": "At the top of the page",
+    "back_to_defaults": "Back to defaults.",
+    "background": "Background",
+    "backup": "Backup",
+    "bangs": "Bangs",
+    "berlin": "Berlin",
+    "blur": "Blur",
+    "browser_colors": "Browser colors",
+    "c": "°C",
+    "cancel": "Cancel",
+    "center": "Center",
+    "city": "City",
+    "clear_skies_until_you": "Clear skies until you set a city under Widgets → Weather.",
+    "clock": "Clock",
+    "clock_format": "Clock format",
+    "color": "Color",
+    "custom": "Custom",
+    "custom_color": "Custom color",
+    "data": "Data",
+    "date_and_time": "Date and time",
+    "defaults": "Defaults",
+    "edit_name": "Edit {name}",
+    "edit_shortcut": "Edit shortcut",
+    "everything_else_goes_to": "Everything else goes to your default search engine.",
+    "export": "Export",
+    "f": "°F",
+    "feels_like": "Feels like",
+    "focus_mode": "Focus mode",
+    "focus_mode_just_the": "Focus mode: just the search",
+    "follow_the_browser_theme": "Follow the browser theme color",
+    "format": "Format",
+    "gif_too_big": "That GIF is over 25 MB. Pick a smaller one.",
+    "green": "Green",
+    "greeting": "Greeting",
+    "hide_add_and_edit": "Hide add and edit buttons",
+    "high_low": "High / low",
+    "history": "History",
+    "hover_to_edit_drag": "Hover to edit, drag to reorder",
+    "humidity": "Humidity",
+    "icon_color": "Icon color",
+    "icon_containers": "Icon containers",
+    "icons_for_every_site": "Icons for every site",
+    "image": "Image",
+    "import": "Import",
+    "intro_animation": "Intro animation",
+    "left": "Left",
+    "lock": "Lock",
+    "logo_text": "Logo text",
+    "look": "Look",
+    "medium": "Medium",
+    "most_visited": "Most visited",
+    "name": "Name",
+    "names": "Names",
+    "next_to_the_clock": "Next to the clock, by Open-Meteo",
+    "next_to_the_mark": "Next to the mark",
+    "no_theme_policy_found": "No theme policy found: pick your browser's color",
+    "none": "None",
+    "not_an_image": "That file isn't an image the browser can read.",
+    "off": "Off",
+    "only_the_logo_and": "Only the logo and search (eye button)",
+    "open": "Open",
+    "open_file": "Open file",
+    "paint_all_icons_in": "Paint all icons in one color",
+    "paste_or_open_a": "Paste or open a list of links",
+    "photo_or_gif_stays": "Photo or GIF, stays on this device",
+    "picture": "Picture",
+    "position": "Position",
+    "precipitation": "Precipitation",
+    "purple": "Purple",
+    "random": "Random",
+    "read_sites_own_hq": "Read sites' own HQ icons, not just popular services",
+    "red": "Red",
+    "remove": "Remove",
+    "replace": "Replace",
+    "reset": "Reset",
+    "restore_from_a_saved": "Restore from a saved file",
+    "right": "Right",
+    "save": "Save",
+    "saved_to_your_downloads": "Saved to your downloads.",
+    "search": "Search",
+    "search_or_enter_address": "Search or enter address",
+    "search_service": "Search {service}",
+    "seconds": "Seconds",
+    "settings": "Settings",
+    "settings_and_shortcuts_as": "Settings and shortcuts as a JSON file",
+    "settings_section": "Settings section",
+    "shimmer": "Shimmer",
+    "shortcuts": "Shortcuts",
+    "show_everything": "Show everything",
+    "show_shortcuts": "Show shortcuts",
+    "single_color": "Single color",
+    "soft": "Soft",
+    "softens_the_picture": "Softens the picture",
+    "stars": "Stars",
+    "strong": "Strong",
+    "sure": "Sure?",
+    "temperature_unit": "Temperature unit",
+    "text": "Text",
+    "that_file_isn_t": "That file isn't a settings backup.",
+    "theme_color": "Theme color",
+    "top_sites_below_your": "Top sites below your shortcuts",
+    "units": "Units",
+    "wallpaper_entrance_when_a": "Wallpaper entrance when a new tab opens",
+    "weather": "Weather",
+    "weather_clear": "Clear",
+    "weather_drizzle": "Drizzle",
+    "weather_fog": "Fog",
+    "weather_overcast": "Overcast",
+    "weather_partly_cloudy": "Partly cloudy",
+    "weather_rain": "Rain",
+    "weather_showers": "Showers",
+    "weather_snow": "Snow",
+    "weather_snow_showers": "Snow showers",
+    "weather_thunderstorm": "Thunderstorm",
+    "where_the_search_and": "Where the search and shortcuts sit",
+    "widgets": "Widgets",
+    "wind": "Wind",
+    "your_shortcuts_are_reset": "Your shortcuts are reset too",
+    "yt_cats_w_helium": "!yt cats, !w helium, !gh prism",
+    "greetings": {
+        "generic": [
+            "Ready when you are.",
+            "Where to?",
+            "Where to next?",
+            "What's next?",
+            "Say the word.",
+            "All yours.",
+            "Clean slate.",
+            "No noise. Just search.",
+            "Nothing to opt out of.",
+            "Fast, quiet, yours.",
+            "Calm, by default.",
+            "Fresh tab, no clutter.",
+            "Look it up.",
+            "Curious about something?",
+            "Type away.",
+            "Go on, ask."
+        ],
+        "night": [
+            "Can't sleep?",
+            "Still up?",
+            "Hello, night owl.",
+            "The quiet hours.",
+            "Late one, huh?",
+            "Just one more search.",
+            "The web never sleeps.",
+            "Up late or up early?"
+        ],
+        "early": [
+            "Early start.",
+            "Up before the alarm?",
+            "Morning, early bird.",
+            "Coffee first?",
+            "Quiet morning."
+        ],
+        "morning": [
+            "Good morning.",
+            "Morning. Where to?",
+            "Morning. What's first?",
+            "Fresh morning, fresh tab."
+        ],
+        "afternoon": [
+            "Good afternoon.",
+            "Afternoon. What's next?",
+            "Back at it.",
+            "Steady afternoon."
+        ],
+        "evening": [
+            "Good evening.",
+            "Evening. Take it easy.",
+            "Winding down?",
+            "Evening, no rush."
+        ],
+        "late": [
+            "Late night?",
+            "Night shift?",
+            "One more tab?",
+            "Almost tomorrow."
+        ],
+        "monday": [
+            "Monday. Here we go.",
+            "New week, clean slate.",
+            "Monday, but calm."
+        ],
+        "tuesday": [
+            "Tuesday. Steady on."
+        ],
+        "wednesday": [
+            "Midweek already.",
+            "Halfway through the week."
+        ],
+        "thursday": [
+            "Thursday. Nearly Friday."
+        ],
+        "friday": [
+            "Friday. Finally.",
+            "It's Friday.",
+            "Friday. Almost there."
+        ],
+        "weekend": [
+            "Weekend mode.",
+            "Slow weekend.",
+            "Weekend. No rush."
+        ],
+        "saturday": [
+            "Saturday. All yours."
+        ],
+        "sunday": [
+            "Sunday. Take it slow.",
+            "Lazy Sunday?"
+        ],
+        "mondayMorning": [
+            "Monday morning. Gently.",
+            "Coffee, then Monday."
+        ],
+        "sundayLate": [
+            "Monday can wait.",
+            "Not Monday yet. Kind of."
+        ],
+        "fridayAfternoon": [
+            "Friday afternoon. Nearly."
+        ],
+        "fridayNight": [
+            "Friday night. Off you go.",
+            "Friday night, finally.",
+            "The weekend starts now."
+        ],
+        "saturdayNight": [
+            "Saturday night. Go on.",
+            "Big Saturday night plans?"
+        ],
+        "sundayEvening": [
+            "Sunday evening. Easy now.",
+            "Quiet Sunday night."
+        ],
+        "newYear": [
+            "Happy New Year.",
+            "Hello, {year}.",
+            "New year, clean slate.",
+            "Fresh calendar. Where to?"
+        ],
+        "newYearsEve": [
+            "Almost {next}.",
+            "Last tabs of the year.",
+            "See you next year."
+        ],
+        "winter": [
+            "Happy holidays.",
+            "Warm wishes.",
+            "Season's greetings.",
+            "Cozy tabs only."
+        ],
+        "valentine": [
+            "Happy Valentine's Day.",
+            "Love is in the URL bar.",
+            "Sweet tabs only."
+        ],
+        "aprilFools": [
+            "Totally normal tab.",
+            "No pranks here. Probably.",
+            "Ads are back. Kidding."
+        ],
+        "piDay": [
+            "Happy Pi Day.",
+            "3.14159 and counting.",
+            "Have a slice of π."
+        ],
+        "earthDay": [
+            "Happy Earth Day.",
+            "Earth Day. Nice planet."
+        ],
+        "starWars": [
+            "May the 4th be with you.",
+            "Search, you must."
+        ],
+        "towelDay": [
+            "Don't forget your towel.",
+            "Happy Towel Day.",
+            "Don't panic."
+        ],
+        "sysadminDay": [
+            "Thank a sysadmin today.",
+            "Happy Sysadmin Day."
+        ],
+        "programmersDay": [
+            "Happy Programmers' Day.",
+            "Day 256. Ship it.",
+            "Day 0x100."
+        ],
+        "adaLovelaceDay": [
+            "Happy Ada Lovelace Day."
+        ],
+        "halloween": [
+            "Happy Halloween.",
+            "Spooky tabs only.",
+            "Boo. Where to?",
+            "Trick or tab?"
+        ],
+        "winterSolstice": [
+            "Longest night. Cozy up."
+        ],
+        "friday13": [
+            "Friday the 13th. Relax.",
+            "Unlucky day, lucky tab.",
+            "Nothing spooky here."
+        ],
+        "leapDay": [
+            "Happy leap day.",
+            "Bonus day. Enjoy it.",
+            "See you in four years."
+        ],
+        "easter": [
+            "Happy Easter.",
+            "Easter Sunday. No rush.",
+            "Egg hunt or tab hunt?"
+        ]
+    }
+}
