@@ -231,6 +231,41 @@
         if (ready) save(settings);
     });
 
+    // quiet when idle: after a while without input the shortcuts, top bar and corner buttons fade.
+    // the search, settings and any open dialog keep it awake, since typing or tuning is still work
+    const IDLE_MS = 6000;
+    let idle = $state(false);
+    let idleTimer: number | undefined;
+    const busy = () =>
+        !!query ||
+        !!document.activeElement?.closest(".search") ||
+        settingsOpen ||
+        addingShortcuts ||
+        document.visibilityState !== "visible";
+    const wake = () => {
+        idle = false;
+        window.clearTimeout(idleTimer);
+        idleTimer = window.setTimeout(sleep, IDLE_MS);
+    };
+    // if still busy, check again later instead of fading in the middle of typing
+    const sleep = () => {
+        if (busy()) idleTimer = window.setTimeout(sleep, IDLE_MS);
+        else idle = true;
+    };
+    $effect(() => {
+        if (!settings.idleFade) return;
+        const events = ["pointermove", "pointerdown", "wheel", "keydown"] as const;
+        for (const e of events) window.addEventListener(e, wake, { passive: true });
+        document.addEventListener("visibilitychange", wake);
+        wake();
+        return () => {
+            for (const e of events) window.removeEventListener(e, wake);
+            document.removeEventListener("visibilitychange", wake);
+            window.clearTimeout(idleTimer);
+            idle = false;
+        };
+    });
+
     // the clock wakes up when its text changes: on the second, or only on the minute
     $effect(() => {
         const step = settings.seconds ? 1000 : 60000;
@@ -466,7 +501,7 @@
 {/key}
 
 {#if (barClock || barWeather) && starsArrived && !settings.quiet}
-    <header class={["datetime", side && "side"]} style:--align={side} transition:pop>
+    <header class={["datetime", side && "side", idle && "idle"]} style:--align={side} transition:pop>
         {#if barClock}
             <span class="group" transition:pop>
                 {#if !logoClock}
@@ -538,7 +573,7 @@
 <main
     style:--below="{belowH}px"
     style:--align={side}
-    class={["shell", side && "side", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
+    class={["shell", side && "side", idle && "idle", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
     <!-- fixed box: both variants swap in place without moving the search -->
     <div class="logo">
         {#key settings.logo}
@@ -667,7 +702,7 @@
     </div>
 </main>
 
-<div class={["corner", settingsOpen && "open"]} onpointerenter={loadSettings} onfocusin={loadSettings}>
+<div class={["corner", settingsOpen && "open", idle && "idle"]} onpointerenter={loadSettings} onfocusin={loadSettings}>
     <Button
         circle
         transparent
@@ -957,6 +992,19 @@
         display: none;
     }
 
+    .shell .below,
+    .datetime {
+        transition: opacity 0.25s ease;
+    }
+
+    .shell.idle .below,
+    .datetime.idle,
+    .corner.idle {
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.8s ease;
+    }
+
     .datetime {
         position: fixed;
         top: 16px;
@@ -1209,6 +1257,23 @@
     .corner:focus-within,
     .corner.open {
         opacity: 1;
+    }
+
+    .corner.idle,
+    .corner.idle:hover {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .shell .below,
+        .datetime,
+        .corner,
+        .shell.idle .below,
+        .datetime.idle,
+        .corner.idle {
+            transition: none;
+        }
     }
 
     .corner-icon {

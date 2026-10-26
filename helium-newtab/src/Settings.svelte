@@ -363,6 +363,7 @@
                         />
                     </Row>
                     <Toggle bind:checked={settings.quiet} onchange={emphasize} name={t("focus_mode")} desc={t("only_the_logo_and")} />
+                    <Toggle bind:checked={settings.idleFade} name={t("fade_when_idle")} desc={t("shortcuts_and_the_top_bar")} />
                     <Toggle bind:checked={settings.intro} name={t("intro_animation")} desc={t("wallpaper_entrance_when_a")} />
                     {#if !WEB}
                     <Toggle

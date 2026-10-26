@@ -17,6 +17,8 @@ export type Settings = {
     align: "left" | "center" | "right";
     /** focus mode: only the logo and the search bar */
     quiet: boolean;
+    /** shortcuts and the top bar fade out after a few idle seconds */
+    idleFade: boolean;
     /** entrance animation of the wallpaper on page load */
     intro: boolean;
     shortcuts: boolean;
@@ -46,6 +48,7 @@ export const defaults: Settings = {
     logo: "greeting",
     align: "center",
     quiet: false,
+    idleFade: false,
     intro: true,
     shortcuts: true,
     lockShortcuts: false,
