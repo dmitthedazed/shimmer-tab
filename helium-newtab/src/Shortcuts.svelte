@@ -25,6 +25,8 @@
         contained?: boolean;
         /** show names under the icons */
         titles?: boolean;
+        /** show 1–9 badges while Alt is held (the number keys) */
+        numbers?: boolean;
         /** CSS color for single-color icons */
         tint?: string | null;
         onchange?: () => void;
@@ -36,6 +38,7 @@
         label,
         contained = false,
         titles = true,
+        numbers = false,
         tint = null,
         onchange,
     }: Props = $props();
@@ -46,6 +49,7 @@
     let urlInput: HTMLInputElement | undefined = $state();
     let dragFrom: number | null = $state(null);
     let dragOver: number | null = $state(null);
+    let altHeld = $state(false);
 
     // stable keys for animate:flip, even if the same URL is pinned twice
     const keyed = $derived(
@@ -104,7 +108,16 @@
     }
 </script>
 
-<svelte:window onkeydown={(e) => e.key === "Escape" && editing !== null && close()} />
+<svelte:window
+    onkeydown={(e) => {
+        if (e.key === "Escape" && editing !== null) close();
+        if (e.key === "Alt") altHeld = true;
+    }}
+    onkeyup={(e) => {
+        if (e.key === "Alt") altHeld = false;
+    }}
+    onblur={() => (altHeld = false)}
+/>
 
 <nav class={["shortcuts", !titles && "compact"]} aria-label={label}>
     {#each keyed as { item, i, key } (key)}
@@ -141,6 +154,9 @@
                 <button type="button" class="circle edit" aria-label={t("edit_name", { name: item.title })} onclick={() => open(i)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
                 </button>
+            {/if}
+            {#if numbers && altHeld && i < 9}
+                <span class="hint" aria-hidden="true" transition:pop>{i + 1}</span>
             {/if}
         </div>
     {/each}
@@ -306,6 +322,25 @@
     .edit svg {
         width: 16px;
         height: 16px;
+    }
+
+    /* the number key for this tile, shown only while Alt is held */
+    .hint {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        z-index: 1;
+        display: grid;
+        place-items: center;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
+        color: var(--background);
+        background-color: var(--secondary);
+        pointer-events: none;
     }
 
     .tile-wrap:hover .edit,

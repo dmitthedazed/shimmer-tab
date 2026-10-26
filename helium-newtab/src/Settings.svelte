@@ -403,6 +403,7 @@
                     <Toggle bind:checked={settings.shortcuts} onchange={emphasize} name={t("show_shortcuts")} desc={t("hover_to_edit_drag")} />
                     {#if settings.shortcuts}
                         <Toggle bind:checked={settings.shortcutTitles} onchange={emphasize} name={t("names")} />
+                        <Toggle bind:checked={settings.shortcutKeys} onchange={emphasize} name={t("number_keys")} desc={t("number_keys_desc")} />
                         <Toggle
                             checked={settings.iconStyle === "contained"}
                             onchange={(on) => {

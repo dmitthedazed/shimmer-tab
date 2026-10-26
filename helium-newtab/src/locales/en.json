@@ -67,6 +67,8 @@
     "next_to_the_mark": "Next to the mark",
     "no_theme_policy_found": "No theme policy found: pick your browser's color",
     "none": "None",
+    "number_keys": "Number keys",
+    "number_keys_desc": "1–9 open a shortcut, hold Alt to see which",
     "not_an_image": "That file isn't an image the browser can read.",
     "off": "Off",
     "only_the_logo_and": "Only the logo and search (eye button)",
