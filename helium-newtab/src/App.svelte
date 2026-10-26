@@ -13,7 +13,8 @@
         Tooltip,
         IconBang,
     } from "@imput/helium-prism";
-    import { resolveBang, resolveBangAsync, suggestBangs } from "./bangs.svelte";
+    import { hasBang, resolveBang, resolveBangAsync, suggestBangs } from "./bangs.svelte";
+    import { answer } from "./calc";
     import Stars from "./Stars.svelte";
     import WeatherBg, { skyFor, type Sky } from "./WeatherBg.svelte";
     import ImageBg from "./ImageBg.svelte";
@@ -307,6 +308,10 @@
         if (!settings.bangs) keyword = null;
     });
 
+    // a bang always wins over an answer; Enter copies the answer instead of searching
+    const result = $derived(settings.answers && !keyword && !hasBang(query) ? answer(query) : null);
+    let copied = $state("");
+
     // Type-to-search: a printable key pressed anywhere outside a text field moves focus
     // into the search bar, and since focus moves during keydown the character lands there.
     function typeToSearch(e: KeyboardEvent) {
@@ -412,6 +417,13 @@
 
     async function search(e: SubmitEvent) {
         e.preventDefault();
+        if (result) {
+            navigator.clipboard?.writeText(result).catch(() => {});
+            copied = result;
+            // the line goes back to the value on its own, so a later Enter reads as a fresh copy
+            setTimeout(() => copied === result && (copied = ""), 1200);
+            return;
+        }
         const text = keyword ? `!${keyword} ${query.trim()}` : query.trim();
         if (!text) return;
         emphasize();
@@ -606,6 +618,10 @@
                 {/if}
             {/snippet}
         </Input>
+
+        {#if result}
+            <div class="answer" aria-live="polite" transition:pop>{copied === result ? t("copied") : `= ${result}`}</div>
+        {/if}
 
         {#if bangSuggestions.length}
             <ul class="bang-list" role="listbox" aria-label={t("bangs")} transition:pop={{ from: 0.96, duration: 150 }}>
@@ -1088,6 +1104,21 @@
 
     :global(:root[data-picture]) .search :global(.input-field:is(:hover, :focus-within)) {
         background-color: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-10));
+    }
+
+    /* out of flow, so the bar and shortcuts never move; the side follows the column */
+    .answer {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: var(--align, center);
+        padding-inline: 18px;
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+        color: var(--secondary);
+        pointer-events: none;
     }
 
     /* bang autocomplete, same surface as the settings panel */

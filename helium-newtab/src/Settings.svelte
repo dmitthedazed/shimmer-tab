@@ -552,6 +552,7 @@
                 <h5>{t("search")}</h5>
                 <div class="list">
                     <Toggle bind:checked={settings.bangs} onchange={emphasize} name={t("bangs")} desc={t("yt_cats_w_helium")} />
+                    <Toggle bind:checked={settings.answers} onchange={emphasize} name={t("answers")} desc={t("answers_desc")} />
                 </div>
                 <p class="note">{t("everything_else_goes_to")}</p>
             </section>
