@@ -358,7 +358,7 @@
         if (target?.closest("input, textarea, select, [contenteditable]")) return false;
         const link = settings.links[Number(m[1]) - 1];
         if (!link) return false;
-        if (e.ctrlKey || e.metaKey) window.open(link.url, "_blank");
+        if (e.ctrlKey || e.metaKey) window.open(link.url, "_blank", "noopener");
         else location.href = link.url;
         return true;
     }
@@ -743,7 +743,7 @@
         {/if}
         {#if settings.recentTabs && recent.length && !settings.quiet}
             <div class="row most-visited" transition:pop={{ from: 0.96, duration: 200 }}>
-                {#if settings.shortcuts}
+                {#if settings.shortcuts || (settings.topSites && top.length)}
                     <div class="divider" aria-hidden="true"><span>{t("recently_closed")}</span></div>
                 {/if}
             <Shortcuts
@@ -754,7 +754,8 @@
                 {tint}
                 label={t("recently_closed")}
                 onopen={(i) => {
-                    void chrome.sessions.restore(recent[i].id);
+                    // the tab comes back with its history; this new tab has done its job
+                    chrome.sessions.restore(recent[i].id).then(() => chrome.tabs.getCurrent((tab) => tab?.id && chrome.tabs.remove(tab.id)));
                     return true;
                 }}
             />
