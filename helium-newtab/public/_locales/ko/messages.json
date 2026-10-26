@@ -1,0 +1,11 @@
+{
+    "name": {
+        "message": "Shimmer Tab for Helium"
+    },
+    "short_name": {
+        "message": "Shimmer Tab"
+    },
+    "description": {
+        "message": "A Helium-styled new tab page: flowing wallpapers, bangs with autocomplete and crisp shortcut icons."
+    }
+}
