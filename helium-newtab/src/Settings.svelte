@@ -329,7 +329,7 @@
                             small
                             options={[
                                 { value: "greeting", label: t("greeting") },
-                                { value: "wordmark", label: "Helium" },
+                                { value: "wordmark", label: settings.chromeLogo ? "Chrome" : "Helium" },
                                 { value: "clock", label: t("clock") },
                                 { value: "mark", label: t("none") },
                             ]}
@@ -567,6 +567,7 @@
             <section>
                 <h5>{t("about")}</h5>
                 <div class="list">
+                    <Toggle bind:checked={settings.chromeLogo} onchange={emphasize} name={t("chrome_logo")} desc={t("chrome_logo_desc")} />
                     <Row name="Shimmer Tab" desc={t("version", { version })}>
                         <Link href="https://github.com/dmitthedazed/shimmer-tab">GitHub</Link>
                     </Row>

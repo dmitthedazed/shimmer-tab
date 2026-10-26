@@ -360,5 +360,7 @@
     "show_search_bar_desc": "When off, it shows up as you type",
     "about": "About",
     "version": "Version {version}",
-    "made_by": "Made by"
+    "made_by": "Made by",
+    "chrome_logo": "Chrome logo",
+    "chrome_logo_desc": "Chrome's mark in place of Helium's"
 }

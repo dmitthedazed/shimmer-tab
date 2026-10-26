@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { openInternal } from "./open";
     import { t } from "./i18n";
     import { Button, Input, Text } from "@imput/helium-prism";
     import { flip } from "svelte/animate";
@@ -147,7 +148,8 @@
             }}
             ondragend={() => (dragFrom = dragOver = null)}
         >
-            <a class="button transparent tile" href={item.url} draggable="false" onclick={(e) => onopen?.(i, e) && e.preventDefault()} title={titles ? item.url : item.title || host(item.url)} aria-label={item.title || host(item.url)}>
+            <a class="button transparent tile" href={item.url} draggable="false" onclick={(e) => (onopen?.(i, e) || openInternal(item.url, e.ctrlKey || e.metaKey)) && e.preventDefault()}
+                onauxclick={(e) => e.button === 1 && openInternal(item.url, true) && e.preventDefault()} title={titles ? item.url : item.title || host(item.url)} aria-label={item.title || host(item.url)}>
                 <SiteIcon url={item.url} title={item.title} {contained} {tint} />
                 {#if titles}
                     <span class="title" transition:collapse>{item.title || host(item.url)}</span>

@@ -15,6 +15,8 @@ export type Settings = {
     searchShown: boolean;
     /** the logo above the search at all */
     logoShown: boolean;
+    /** Chrome's mark instead of Helium's, for those on Chrome */
+    chromeLogo: boolean;
     /** a result line under the search for math and unit conversions */
     answers: boolean;
     /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
@@ -57,6 +59,7 @@ export const defaults: Settings = {
     bangs: true,
     searchShown: true,
     logoShown: true,
+    chromeLogo: false,
     answers: true,
     logo: "greeting",
     align: "center",
@@ -179,7 +182,7 @@ export function save(settings: Settings) {
     if (json !== stored) timer = setTimeout(flush, 500);
 }
 
-const SAFE_SCHEMES = ["http:", "https:", "chrome:", "about:"];
+const SAFE_SCHEMES = ["http:", "https:", "chrome:", "helium:", "about:"];
 
 export function normalizeUrl(input: string) {
     const s = input.trim();

@@ -15,6 +15,8 @@
     } from "@imput/helium-prism";
     import { hasBang, resolveBang, resolveBangAsync, suggestBangs } from "./bangs.svelte";
     import { answer } from "./calc";
+    import { openInternal } from "./open";
+    import ChromeLogo, { brand } from "./ChromeLogo.svelte";
     import Stars from "./Stars.svelte";
     import WeatherBg, { skyFor, type Sky } from "./WeatherBg.svelte";
     import ImageBg from "./ImageBg.svelte";
@@ -315,6 +317,11 @@
     const date = $derived(
         now.toLocaleDateString([], { weekday: "short", day: "numeric", month: "long" }),
     );
+    // tiles for the browser's own pages follow the logo
+    $effect(() => {
+        brand.chrome = settings.chromeLogo;
+    });
+
     // the logo can be the clock; then the bar on top doesn't repeat what it shows
     const logoClock = $derived(settings.logoShown && (settings.logo === "clock" || settings.logo === "bigClock"));
     const barClock = $derived(settings.clock && !logoClock);
@@ -359,7 +366,9 @@
         if (target?.closest("input, textarea, select, [contenteditable]")) return false;
         const link = settings.links[Number(m[1]) - 1];
         if (!link) return false;
-        if (e.ctrlKey || e.metaKey) window.open(link.url, "_blank", "noopener");
+        const newTab = e.ctrlKey || e.metaKey;
+        if (openInternal(link.url, newTab)) return true;
+        if (newTab) window.open(link.url, "_blank", "noopener");
         else location.href = link.url;
         return true;
     }
@@ -612,6 +621,14 @@
 {/if}
 
 
+{#snippet Mark({ height, text = false }: { height: string; text?: boolean })}
+    {#if settings.chromeLogo}
+        <ChromeLogo {height} {text} />
+    {:else}
+        <HeliumLogo {height} {text} />
+    {/if}
+{/snippet}
+
 {#snippet dateLine()}
     <span class="date">{date}</span>
     {#if weather}
@@ -633,14 +650,14 @@
             <div class="logo-variant" transition:pop>
                 {#if settings.logo === "greeting"}
                     <div class="greeting">
-                        <HeliumLogo height="40px" />
+                        {@render Mark({ height: "40px" })}
                         <p dir="auto">{greeting}</p>
                     </div>
                 {:else if settings.logo === "wordmark"}
-                    <HeliumLogo height="44px" text />
+                    {@render Mark({ height: "44px", text: true })}
                 {:else if settings.logo === "clock"}
                     <div class="greeting">
-                        <HeliumLogo height="40px" />
+                        {@render Mark({ height: "40px" })}
                         <div class="logo-clock">
                             <p class="logo-time">{time}</p>
                             <span class="date-line">{@render dateLine()}</span>
@@ -652,7 +669,7 @@
                         <span class="big-time">{time}</span>
                     </div>
                 {:else}
-                    <HeliumLogo height="56px" />
+                    {@render Mark({ height: "56px" })}
                 {/if}
             </div>
         {/key}

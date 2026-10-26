@@ -4,6 +4,8 @@
     import { knockout, tintMask } from "./tint";
     import { fade } from "svelte/transition";
     import { isDark } from "./scheme.svelte";
+    import { HeliumLogo } from "@imput/helium-prism";
+    import ChromeLogo, { brand } from "./ChromeLogo.svelte";
 
     type Props = {
         url: string;
@@ -23,14 +25,18 @@
 
     const dark = $derived(isDark());
 
-    // a dev server on this machine: a code tile with its port instead of a favicon
+    // A tile of our own instead of a favicon: a dev server on this machine (code glyph and
+    // its port), or one of the browser's own pages (the Helium mark and the page's name).
     const local = $derived.by(() => {
         try {
             const u = new URL(url);
+            if (["chrome:", "helium:", "about:"].includes(u.protocol)) {
+                return { internal: true, label: "" }; // the name under the tile already says which
+            }
             const h = u.hostname.replace(/\.+$/, "");
             const isLocal =
                 h === "localhost" || h.endsWith(".localhost") || h === "[::1]" || h === "0.0.0.0" || /^127\./.test(h);
-            return isLocal ? { port: u.port } : null;
+            return isLocal ? { internal: false, label: u.port } : null;
         } catch {
             return null;
         }
@@ -97,18 +103,26 @@
 </script>
 
 <span
-    class={["site-icon", contained && "contained", (local || (icon && !icon.src)) && "letter", local && "local", tint && "tint", !icon && !local && "loading"]}
+    class={["site-icon", contained && "contained", (local || (icon && !icon.src)) && "letter", local && "local", local?.internal && "internal", local?.internal && brand.chrome && !tint && "chrome", tint && "tint", !icon && !local && "loading"]}
     style:--size="{size}px"
     style:--hue={hue}
     style:--tint={tint}
     aria-hidden="true"
 >
     {#if local}
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="m8 7-5 5 5 5M16 7l5 5-5 5" />
-        </svg>
-        {#if local.port}
-            <span class="port">{local.port}</span>
+        {#if local.internal}
+            {#if brand.chrome && !tint}
+                <ChromeLogo height="{Math.round(size * 0.62)}px" />
+            {:else}
+                <HeliumLogo height="{Math.round(size * 0.5)}px" />
+            {/if}
+        {:else}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="m8 7-5 5 5 5M16 7l5 5-5 5" />
+            </svg>
+        {/if}
+        {#if local.label}
+            <span class="port">{local.label}</span>
         {/if}
     {:else if icon?.src}
         <!-- both stay mounted so switching single-color mode crossfades -->
@@ -231,6 +245,16 @@
     .local svg {
         width: 46%;
         height: 46%;
+    }
+
+    /* the browser's own pages wear Helium's blue */
+    .internal {
+        background: var(--tint, var(--helium-blue, #3450d1));
+    }
+
+    /* in Chrome mode the colored mark sits on a light plate, like an app icon */
+    .internal.chrome {
+        background: #fff;
     }
 
     .port {
