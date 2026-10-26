@@ -8,3 +8,6 @@ previews/**/*.mp4
 # Chrome Web Store materials stay local
 store/
 helium-newtab/dist-web
+
+# API keys for scripts/setup-secrets.mjs, never committed
+secrets.env
