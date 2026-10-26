@@ -83,6 +83,8 @@
     "purple": "Purple",
     "random": "Random",
     "read_sites_own_hq": "Read sites' own HQ icons, not just popular services",
+    "recently_closed": "Recently closed",
+    "recently_closed_desc": "Tabs you closed lately, to reopen",
     "red": "Red",
     "remove": "Remove",
     "replace": "Replace",

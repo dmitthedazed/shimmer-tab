@@ -448,6 +448,16 @@
                         name={t("most_visited")}
                         desc={t("top_sites_below_your")}
                     />
+                    <Toggle
+                        bind:checked={settings.recentTabs}
+                        onchange={(on) => {
+                            emphasize();
+                            if (on) grant("recentTabs").then((ok) => ok || (settings.recentTabs = false));
+                            else revoke("recentTabs");
+                        }}
+                        name={t("recently_closed")}
+                        desc={t("recently_closed_desc")}
+                    />
                 </div>
             </section>
             {/if}

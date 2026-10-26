@@ -30,6 +30,8 @@
         /** CSS color for single-color icons */
         tint?: string | null;
         onchange?: () => void;
+        /** return true to handle a tile click yourself (the link's href stays for middle-click) */
+        onopen?: (index: number, e: MouseEvent) => boolean;
     };
 
     let {
@@ -41,6 +43,7 @@
         numbers = false,
         tint = null,
         onchange,
+        onopen,
     }: Props = $props();
 
     let editing: number | null = $state(null); // index, or -1 for a new one
@@ -144,7 +147,7 @@
             }}
             ondragend={() => (dragFrom = dragOver = null)}
         >
-            <a class="button transparent tile" href={item.url} draggable="false" title={titles ? item.url : item.title || host(item.url)} aria-label={item.title || host(item.url)}>
+            <a class="button transparent tile" href={item.url} draggable="false" onclick={(e) => onopen?.(i, e) && e.preventDefault()} title={titles ? item.url : item.title || host(item.url)} aria-label={item.title || host(item.url)}>
                 <SiteIcon url={item.url} title={item.title} {contained} {tint} />
                 {#if titles}
                     <span class="title" transition:collapse>{item.title || host(item.url)}</span>
