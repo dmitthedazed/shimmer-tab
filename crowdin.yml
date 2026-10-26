@@ -1,0 +1,5 @@
+files:
+  - source: /helium-newtab/src/locales/en.json
+    translation: /helium-newtab/src/locales/%two_letters_code%.json
+  - source: /helium-newtab/public/_locales/en/messages.json
+    translation: /helium-newtab/public/_locales/%two_letters_code%/messages.json
