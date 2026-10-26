@@ -146,6 +146,20 @@
             "Type away.",
             "Go on, ask."
         ],
+        "memes": [
+            "6 7.",
+            "Aura farming.",
+            "Locked in.",
+            "Chat, is this real?",
+            "Delulu is the solulu.",
+            "No cap. Just tabs.",
+            "We're so back.",
+            "It's giving new tab.",
+            "Don't crash out. Search.",
+            "Tung tung tung sahur.",
+            "Main character energy.",
+            "Clankers not invited."
+        ],
         "night": [
             "Can't sleep?",
             "Still up?",
@@ -190,7 +204,8 @@
         "monday": [
             "Monday. Here we go.",
             "New week, clean slate.",
-            "Monday, but calm."
+            "Monday, but calm.",
+            "#grrmondays"
         ],
         "tuesday": [
             "Tuesday. Steady on."
@@ -323,6 +338,9 @@
             "Happy Easter.",
             "Easter Sunday. No rush.",
             "Egg hunt or tab hunt?"
+        ],
+        "chineseNewYear": [
+            "You met me at a very chinese time of my life"
         ]
     }
 }

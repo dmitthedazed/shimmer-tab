@@ -11,7 +11,7 @@
 import enLocale from "./locales/en.json";
 import { greetingTable } from "./i18n";
 
-type Ctx = { y: number; m: number; d: number; dow: number; h: number; yday: number; easter: [number, number] };
+type Ctx = { y: number; m: number; d: number; dow: number; h: number; yday: number; easter: [number, number]; lunarNewYear: boolean };
 
 // another language is another table with the same keys
 // the lines live in locales/en.json (and its translations), one list per pool
@@ -33,6 +33,7 @@ const WEEKDAY = 2;
 
 const rules: [Pool, number, (c: Ctx) => boolean][] = [
     ["generic", 1, () => true],
+    ["memes", 1, () => true],
     ["night", TIME, night],
     ["early", TIME, at(5, 8)],
     ["morning", TIME, at(8, 12)],
@@ -73,6 +74,7 @@ const rules: [Pool, number, (c: Ctx) => boolean][] = [
     ["winterSolstice", HOLIDAY, on(12, 21)],
     ["friday13", HOLIDAY, (c) => c.dow === 5 && c.d === 13],
     ["easter", HOLIDAY, (c) => c.m === c.easter[0] && c.d === c.easter[1]],
+    ["chineseNewYear", HOLIDAY, (c) => c.lunarNewYear],
 ];
 
 /** Western Easter Sunday as [month, day] (anonymous Gregorian algorithm). */
@@ -87,13 +89,27 @@ export function easter(y: number): [number, number] {
     return [Math.floor(n / 31), (n % 31) + 1];
 }
 
+// Chinese New Year as [month, day]; ICU's Chinese calendar is a day off in some years
+// (2027, 2030), so the dates are written out, with ICU as the fallback after the table
+const LUNAR_NEW_YEAR: Record<number, [number, number]> = {
+    2026: [2, 17], 2027: [2, 6], 2028: [1, 26], 2029: [2, 13], 2030: [2, 3],
+    2031: [1, 23], 2032: [2, 11], 2033: [1, 31], 2034: [2, 19], 2035: [2, 8],
+};
+const chinese = new Intl.DateTimeFormat("en-u-ca-chinese", { month: "numeric", day: "numeric" });
+function isLunarNewYear(date: Date) {
+    const known = LUNAR_NEW_YEAR[date.getFullYear()];
+    if (known) return date.getMonth() + 1 === known[0] && date.getDate() === known[1];
+    const parts = chinese.formatToParts(date);
+    return parts.find((p) => p.type === "month")?.value === "1" && parts.find((p) => p.type === "day")?.value === "1";
+}
+
 function context(date: Date): Ctx {
     const y = date.getFullYear();
     const m = date.getMonth() + 1;
     const d = date.getDate();
     // calendar days in UTC, so DST shifts can't skew the count
     const yday = (Date.UTC(y, m - 1, d) - Date.UTC(y, 0, 1)) / 864e5 + 1;
-    return { y, m, d, dow: date.getDay(), h: date.getHours(), yday, easter: easter(y) };
+    return { y, m, d, dow: date.getDay(), h: date.getHours(), yday, easter: easter(y), lunarNewYear: isLunarNewYear(date) };
 }
 
 export type Greeting = { id: string; text: string };
