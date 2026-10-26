@@ -22,7 +22,8 @@
         "128": "icon-128.png"
     },
     "optional_permissions": [
-        "topSites"
+        "topSites",
+        "sessions"
     ],
     "optional_host_permissions": [
         "https://*/*",

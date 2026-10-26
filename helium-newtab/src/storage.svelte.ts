@@ -29,6 +29,8 @@ export type Settings = {
     iconStyle: "plain" | "contained";
     links: Shortcut[];
     topSites: boolean;
+    /** tabs closed recently, from the sessions API (optional permission) */
+    recentTabs: boolean;
     weather: boolean;
     city: string;
     fahrenheit: boolean;
@@ -59,6 +61,7 @@ export const defaults: Settings = {
         { title: "Helium", url: "https://helium.computer/" },
     ],
     topSites: false,
+    recentTabs: false,
     weather: false,
     city: "",
     fahrenheit: false,

@@ -389,6 +389,24 @@
         })(),
     );
 
+    // tabs closed recently, restored by session id rather than opened by url
+    let recent: (Shortcut & { id: string })[] = $state([]);
+
+    $effect(() => {
+        void perms.recentTabs; // the API shows up once the optional permission is granted
+        if (!settings.recentTabs || typeof chrome === "undefined" || !chrome.sessions) return;
+        const load = () =>
+            chrome.sessions.getRecentlyClosed({ maxResults: 10 }, (sessions) => {
+                recent = sessions
+                    .filter((s) => /^https?:\/\//.test(s.tab?.url ?? "") && s.tab?.sessionId)
+                    .slice(0, 5)
+                    .map((s) => ({ title: s.tab?.title ?? "", url: s.tab?.url ?? "", id: s.tab?.sessionId ?? "" }));
+            });
+        load();
+        chrome.sessions.onChanged.addListener(load);
+        return () => chrome.sessions.onChanged.removeListener(load);
+    });
+
     // debounced so typing a city doesn't fire a request per key
     $effect(() => {
         if (!ready) return;
@@ -661,6 +679,25 @@
                 titles={settings.shortcutTitles}
                 {tint}
                 label={t("most_visited")}
+            />
+            </div>
+        {/if}
+        {#if settings.recentTabs && recent.length && !settings.quiet}
+            <div class="row most-visited" transition:pop={{ from: 0.96, duration: 200 }}>
+                {#if settings.shortcuts}
+                    <div class="divider" aria-hidden="true"><span>{t("recently_closed")}</span></div>
+                {/if}
+            <Shortcuts
+                items={recent}
+                readonly
+                contained={settings.iconStyle === "contained"}
+                titles={settings.shortcutTitles}
+                {tint}
+                label={t("recently_closed")}
+                onopen={(i) => {
+                    void chrome.sessions.restore(recent[i].id);
+                    return true;
+                }}
             />
             </div>
         {/if}
