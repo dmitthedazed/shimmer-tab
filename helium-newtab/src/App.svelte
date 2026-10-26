@@ -307,6 +307,23 @@
         if (!settings.bangs) keyword = null;
     });
 
+    // Number keys: 1–9 open the matching shortcut. Ctrl/Cmd opens it in a background tab.
+    // Matches on the physical key (e.code) so Shift+digit still counts.
+    function openByNumber(e: KeyboardEvent): boolean {
+        const m = e.code.match(/^(?:Digit|Numpad)([1-9])$/);
+        if (!m || e.altKey || e.isComposing || e.defaultPrevented) return false;
+        if (!settings.shortcutKeys || !settings.shortcuts || settings.quiet) return false;
+        // dialogs and the settings panel all sit under a scrim or are flagged here
+        if (settingsOpen || addingShortcuts || document.querySelector(".scrim")) return false;
+        const target = e.target as HTMLElement | null;
+        if (target?.closest("input, textarea, select, [contenteditable]")) return false;
+        const link = settings.links[Number(m[1]) - 1];
+        if (!link) return false;
+        if (e.ctrlKey || e.metaKey) window.open(link.url, "_blank");
+        else location.href = link.url;
+        return true;
+    }
+
     // Type-to-search: a printable key pressed anywhere outside a text field moves focus
     // into the search bar, and since focus moves during keydown the character lands there.
     function typeToSearch(e: KeyboardEvent) {
@@ -433,7 +450,7 @@
 </script>
 
 <!-- backgrounds crossfade when switched -->
-<svelte:window onkeydown={typeToSearch} />
+<svelte:window onkeydown={(e) => openByNumber(e) || typeToSearch(e)} />
 
 {#key bg}
     <div
@@ -643,6 +660,7 @@
                 readonly={settings.lockShortcuts}
                 contained={settings.iconStyle === "contained"}
                 titles={settings.shortcutTitles}
+                numbers={settings.shortcutKeys}
                 {tint}
                 label={t("shortcuts")}
                 onchange={emphasize}

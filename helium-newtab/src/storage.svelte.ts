@@ -22,6 +22,8 @@ export type Settings = {
     shortcuts: boolean;
     lockShortcuts: boolean;
     shortcutTitles: boolean;
+    /** 1–9 open the matching shortcut */
+    shortcutKeys: boolean;
     /** paint all icons in one color */
     iconTint: boolean;
     /** "accent", "text" or a hex color */
@@ -50,6 +52,7 @@ export const defaults: Settings = {
     shortcuts: true,
     lockShortcuts: false,
     shortcutTitles: true,
+    shortcutKeys: true,
     iconTint: false,
     tintColor: "accent",
     iconStyle: "plain",
