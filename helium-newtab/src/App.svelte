@@ -13,7 +13,8 @@
         Tooltip,
         IconBang,
     } from "@imput/helium-prism";
-    import { resolveBang, resolveBangAsync, suggestBangs } from "./bangs.svelte";
+    import { hasBang, resolveBang, resolveBangAsync, suggestBangs } from "./bangs.svelte";
+    import { answer } from "./calc";
     import Stars from "./Stars.svelte";
     import WeatherBg, { skyFor, type Sky } from "./WeatherBg.svelte";
     import ImageBg from "./ImageBg.svelte";
@@ -342,7 +343,7 @@
         if (!settings.bangs) keyword = null;
     });
 
-    // a hidden search bar stays in place (so nothing jumps) and shows up while you type
+    // a hidden search bar gives its room to the rest and opens up while you type
     let searchFocused = $state(false);
     const searchTucked = $derived(!settings.searchShown && !searchFocused && !query);
 
@@ -362,6 +363,10 @@
         else location.href = link.url;
         return true;
     }
+
+    // a bang always wins over an answer; Enter copies the answer instead of searching
+    const result = $derived(settings.answers && !keyword && !hasBang(query) ? answer(query) : null);
+    let copied = $state("");
 
     // Type-to-search: a printable key pressed anywhere outside a text field moves focus
     // into the search bar, and since focus moves during keydown the character lands there.
@@ -486,6 +491,14 @@
 
     async function search(e: SubmitEvent) {
         e.preventDefault();
+        if (result) {
+            const value = result.value;
+            navigator.clipboard?.writeText(value).catch(() => {});
+            copied = value;
+            // the line goes back to the value on its own, so a later Enter reads as a fresh copy
+            setTimeout(() => copied === value && (copied = ""), 1200);
+            return;
+        }
         const text = keyword ? `!${keyword} ${query.trim()}` : query.trim();
         if (!text) return;
         emphasize();
@@ -612,7 +625,7 @@
 <main
     style:--below="{belowH}px"
     style:--align={side}
-    class={["shell", side && "side", !settings.logoShown && "no-logo", idle && "idle", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
+    class={["shell", side && "side", !settings.logoShown && "no-logo", searchTucked && "no-search", idle && "idle", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
     <!-- fixed box: both variants swap in place without moving the search -->
     {#if settings.logoShown}
     <div class="logo" transition:pop>
@@ -682,6 +695,10 @@
                 {/if}
             {/snippet}
         </Input>
+
+        {#if result}
+            <div class="answer" aria-live="polite" transition:pop>{copied === result.value ? t("copied") : `= ${result.text}`}</div>
+        {/if}
 
         {#if bangSuggestions.length}
             <ul class="bang-list" role="listbox" aria-label={t("bangs")} transition:pop={{ from: 0.96, duration: 150 }}>
@@ -1007,15 +1024,20 @@
         min-height: 100vh;
         /* Logo + search sit at a fixed spot while what's under them fits; with more rows
            (shortcuts, most visited) the whole block rises to stay centered. 76px is the
-           search and the gap under it, --logo the logo and the gap under that. */
+           search and the gap under it (--search), --logo the logo and the gap under that. */
         --logo: 84px;
-        padding: max(48px, min(calc(50vh - 6px - var(--logo)), calc(50vh - (76px + var(--logo) + var(--below, 0px)) / 2)))
+        --search: 76px;
+        padding: max(48px, min(calc(50vh - 6px - var(--logo)), calc(50vh - (var(--search) + var(--logo) + var(--below, 0px)) / 2)))
             16px 96px;
     }
 
     /* without the logo the search keeps its spot */
     .shell.no-logo {
         --logo: 0px;
+    }
+
+    .shell.no-search {
+        --search: 0px;
     }
 
     /* to one side: everything lines up along the column's edge */
@@ -1195,13 +1217,19 @@
            stacking context, so the bang list's z-index alone can't escape the form */
         z-index: 10;
         width: min(100%, 600px);
+        interpolate-size: allow-keywords;
         transition:
+            height 0.3s cubic-bezier(0.3, 1, 0.5, 1),
+            margin 0.3s cubic-bezier(0.3, 1, 0.5, 1),
             opacity 0.25s,
             scale 0.25s;
     }
 
-    /* still focusable, so type-to-search can bring it back */
+    /* folded away along with the gap under it, but still focusable, so type-to-search
+       can open it again */
     .search.tucked {
+        height: 0;
+        margin-bottom: -28px;
         opacity: 0;
         scale: 0.98;
         pointer-events: none;
@@ -1214,6 +1242,21 @@
 
     :global(:root[data-picture]) .search :global(.input-field:is(:hover, :focus-within)) {
         background-color: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-10));
+    }
+
+    /* out of flow, so the bar and shortcuts never move; the side follows the column */
+    .answer {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        display: flex;
+        justify-content: var(--align, center);
+        padding-inline: 18px;
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+        color: var(--secondary);
+        pointer-events: none;
     }
 
     /* bang autocomplete, same surface as the settings panel */

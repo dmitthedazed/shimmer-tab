@@ -15,6 +15,8 @@ export type Settings = {
     searchShown: boolean;
     /** the logo above the search at all */
     logoShown: boolean;
+    /** a result line under the search for math and unit conversions */
+    answers: boolean;
     /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
     logo: "greeting" | "wordmark" | "clock" | "bigClock" | "mark";
     /** where the logo, search and shortcuts sit across the page */
@@ -55,6 +57,7 @@ export const defaults: Settings = {
     bangs: true,
     searchShown: true,
     logoShown: true,
+    answers: true,
     logo: "greeting",
     align: "center",
     quiet: false,
