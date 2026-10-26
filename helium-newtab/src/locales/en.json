@@ -344,5 +344,7 @@
         ]
     },
     "big_clock": "Big clock",
-    "big_clock_desc": "The time instead of the mark"
+    "big_clock_desc": "The time instead of the mark",
+    "show_logo": "Show logo",
+    "show_logo_desc": "The mark above the search"
 }

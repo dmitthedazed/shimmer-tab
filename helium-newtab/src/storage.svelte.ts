@@ -11,6 +11,8 @@ export type Settings = {
     /** seed for browser colors when no BrowserThemeColor policy is set (unmanaged browsers) */
     themeColor: string;
     bangs: boolean;
+    /** the logo above the search at all */
+    logoShown: boolean;
     /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
     logo: "greeting" | "wordmark" | "clock" | "bigClock" | "mark";
     /** where the logo, search and shortcuts sit across the page */
@@ -43,6 +45,7 @@ export const defaults: Settings = {
     browserTheme: false,
     themeColor: "",
     bangs: true,
+    logoShown: true,
     logo: "greeting",
     align: "center",
     quiet: false,

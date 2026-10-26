@@ -321,6 +321,8 @@
             <section>
                 <h5>{t("appearance")}</h5>
                 <div class="list">
+                    <Toggle bind:checked={settings.logoShown} onchange={emphasize} name={t("show_logo")} desc={t("show_logo_desc")} />
+                    {#if settings.logoShown}
                     <Row name={t("logo_text")} desc={t("next_to_the_mark")}>
                         <Segmented
                             small
@@ -348,6 +350,7 @@
                             name={t("big_clock")}
                             desc={t("big_clock_desc")}
                         />
+                    {/if}
                     {/if}
                     <Row name={t("position")} desc={t("where_the_search_and")}>
                         <Segmented

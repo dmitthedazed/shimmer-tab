@@ -280,7 +280,7 @@
         now.toLocaleDateString([], { weekday: "short", day: "numeric", month: "long" }),
     );
     // the logo can be the clock; then the bar on top doesn't repeat what it shows
-    const logoClock = $derived(settings.logo === "clock" || settings.logo === "bigClock");
+    const logoClock = $derived(settings.logoShown && (settings.logo === "clock" || settings.logo === "bigClock"));
     const barClock = $derived(settings.clock && !logoClock);
     // a clock logo takes the date and weather along, so the bar goes away
     const barWeather = $derived(logoClock ? null : weather);
@@ -538,9 +538,10 @@
 <main
     style:--below="{belowH}px"
     style:--align={side}
-    class={["shell", side && "side", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
+    class={["shell", side && "side", !settings.logoShown && "no-logo", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
     <!-- fixed box: both variants swap in place without moving the search -->
-    <div class="logo">
+    {#if settings.logoShown}
+    <div class="logo" transition:pop>
         {#key settings.logo}
             <div class="logo-variant" transition:pop>
                 {#if settings.logo === "greeting"}
@@ -569,6 +570,7 @@
             </div>
         {/key}
     </div>
+    {/if}
 
     <form class="search" onsubmit={search}>
         <!-- like Helium's omnibox keyword mode (and exsesx/helium-new-tab):
@@ -909,10 +911,16 @@
         gap: 28px;
         min-height: 100vh;
         /* Logo + search sit at a fixed spot while what's under them fits; with more rows
-           (shortcuts, most visited) the whole block rises to stay centered. 160px is the
-           logo + search + gap. */
-        padding: max(48px, min(calc(50vh - 90px), calc(50vh - (160px + var(--below, 0px)) / 2)))
+           (shortcuts, most visited) the whole block rises to stay centered. 76px is the
+           search and the gap under it, --logo the logo and the gap under that. */
+        --logo: 84px;
+        padding: max(48px, min(calc(50vh - 6px - var(--logo)), calc(50vh - (76px + var(--logo) + var(--below, 0px)) / 2)))
             16px 96px;
+    }
+
+    /* without the logo the search keeps its spot */
+    .shell.no-logo {
+        --logo: 0px;
     }
 
     /* to one side: everything lines up along the column's edge */
