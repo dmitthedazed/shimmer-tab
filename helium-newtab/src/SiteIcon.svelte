@@ -23,8 +23,22 @@
 
     const dark = $derived(isDark());
 
+    // a dev server on this machine: a code tile with its port instead of a favicon
+    const local = $derived.by(() => {
+        try {
+            const u = new URL(url);
+            const h = u.hostname.replace(/\.+$/, "");
+            const isLocal =
+                h === "localhost" || h.endsWith(".localhost") || h === "[::1]" || h === "0.0.0.0" || /^127\./.test(h);
+            return isLocal ? { port: u.port } : null;
+        } catch {
+            return null;
+        }
+    });
+
     $effect(() => {
         void perms.epoch; // look again when access to sites changes
+        if (local) return;
         let alive = true;
         siteIcon(url).then((i) => alive && (icon = i));
         return () => (alive = false);
@@ -83,13 +97,20 @@
 </script>
 
 <span
-    class={["site-icon", contained && "contained", icon && !icon.src && "letter", tint && "tint", !icon && "loading"]}
+    class={["site-icon", contained && "contained", (local || (icon && !icon.src)) && "letter", local && "local", tint && "tint", !icon && !local && "loading"]}
     style:--size="{size}px"
     style:--hue={hue}
     style:--tint={tint}
     aria-hidden="true"
 >
-    {#if icon?.src}
+    {#if local}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="m8 7-5 5 5 5M16 7l5 5-5 5" />
+        </svg>
+        {#if local.port}
+            <span class="port">{local.port}</span>
+        {/if}
+    {:else if icon?.src}
         <!-- both stay mounted so switching single-color mode crossfades -->
         <img
             class={[icon.fullBleed && !plain && "app", tint && mask && "hidden"]}
@@ -197,6 +218,27 @@
     .letter {
         background: var(--tint, oklch(0.62 0.13 var(--hue)));
         color: #fff;
+    }
+
+    .local {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: calc(var(--size) * 0.02);
+        animation: appear 0.25s ease;
+    }
+
+    .local svg {
+        width: 46%;
+        height: 46%;
+    }
+
+    .port {
+        font-size: calc(var(--size) * 0.2);
+        font-weight: 600;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0.02em;
     }
 
     .letter.tint {
