@@ -12,7 +12,7 @@ export type Settings = {
     themeColor: string;
     bangs: boolean;
     /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
-    logo: "greeting" | "wordmark" | "mark";
+    logo: "greeting" | "wordmark" | "clock" | "bigClock" | "mark";
     /** where the logo, search and shortcuts sit across the page */
     align: "left" | "center" | "right";
     /** focus mode: only the logo and the search bar */
@@ -75,7 +75,7 @@ export function normalize(raw: Record<string, unknown> | null | undefined): Sett
     if (raw && !raw.background && raw.shimmer === false) settings.background = "none";
     delete (settings as { shimmer?: boolean }).shimmer;
     // before greetings: a `logoText` toggle; existing setups keep what they had
-    if (raw && !["greeting", "wordmark", "mark"].includes(raw.logo as string))
+    if (raw && !["greeting", "wordmark", "clock", "bigClock", "mark"].includes(raw.logo as string))
         settings.logo = Object.keys(raw).length ? (raw.logoText === false ? "mark" : "wordmark") : defaults.logo;
     delete (settings as { logoText?: boolean }).logoText;
     // imported backups go through here too: only links that open as pages

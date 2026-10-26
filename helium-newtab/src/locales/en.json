@@ -342,5 +342,7 @@
         "chineseNewYear": [
             "You met me at a very chinese time of my life"
         ]
-    }
+    },
+    "big_clock": "Big clock",
+    "big_clock_desc": "The time instead of the mark"
 }

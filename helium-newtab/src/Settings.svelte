@@ -327,13 +327,28 @@
                             options={[
                                 { value: "greeting", label: t("greeting") },
                                 { value: "wordmark", label: "Helium" },
+                                { value: "clock", label: t("clock") },
                                 { value: "mark", label: t("none") },
                             ]}
-                            bind:value={settings.logo}
+                            bind:value={
+                                () => (settings.logo === "bigClock" ? "clock" : settings.logo),
+                                (v) => (settings.logo = v)
+                            }
                             label={t("logo_text")}
                             onchange={emphasize}
                         />
                     </Row>
+                    {#if settings.logo === "clock" || settings.logo === "bigClock"}
+                        <Toggle
+                            bind:checked={
+                                () => settings.logo === "bigClock",
+                                (v) => (settings.logo = v ? "bigClock" : "clock")
+                            }
+                            onchange={emphasize}
+                            name={t("big_clock")}
+                            desc={t("big_clock_desc")}
+                        />
+                    {/if}
                     <Row name={t("position")} desc={t("where_the_search_and")}>
                         <Segmented
                             small

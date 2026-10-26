@@ -279,6 +279,11 @@
     const date = $derived(
         now.toLocaleDateString([], { weekday: "short", day: "numeric", month: "long" }),
     );
+    // the logo can be the clock; then the bar on top doesn't repeat what it shows
+    const logoClock = $derived(settings.logo === "clock" || settings.logo === "bigClock");
+    const barClock = $derived(settings.clock && !logoClock);
+    // a clock logo takes the date and weather along, so the bar goes away
+    const barWeather = $derived(logoClock ? null : weather);
 
     // Keyword mode like Helium's omnibox: a complete "!yt " leaves the text and
     // turns into the service chip; Backspace at the start or Esc leaves it.
@@ -460,22 +465,24 @@
     </div>
 {/key}
 
-{#if (settings.clock || weather) && starsArrived && !settings.quiet}
+{#if (barClock || barWeather) && starsArrived && !settings.quiet}
     <header class={["datetime", side && "side"]} style:--align={side} transition:pop>
-        {#if settings.clock}
+        {#if barClock}
             <span class="group" transition:pop>
-                <!-- a new format (12/24h, seconds) pops in instead of jumping -->
-                {#key `${settings.hour12}${settings.seconds}`}
-                    <span class="time" in:pop={{ from: 0.9, duration: 200 }}>{time}</span>
-                {/key}
-                <span class="dot" aria-hidden="true">·</span>
+                {#if !logoClock}
+                    <!-- a new format (12/24h, seconds) pops in instead of jumping -->
+                    {#key `${settings.hour12}${settings.seconds}`}
+                        <span class="time" in:pop={{ from: 0.9, duration: 200 }}>{time}</span>
+                    {/key}
+                    <span class="dot" aria-hidden="true">·</span>
+                {/if}
                 <span class="date">{date}</span>
             </span>
         {/if}
-        {#if settings.clock && weather}
+        {#if barClock && barWeather}
             <span class="dot" aria-hidden="true" transition:pop>·</span>
         {/if}
-        {#if weather}
+        {#if barWeather}
             {@const info = describe(weather.code)}
             {@const w = weather}
             <span class="group" transition:pop>
@@ -518,6 +525,16 @@
 {/if}
 
 
+{#snippet dateLine()}
+    <span class="date">{date}</span>
+    {#if weather}
+        {@const info = describe(weather.code)}
+        <span aria-hidden="true">·</span>
+        <span class="wi" title={info.label}><WeatherIcon kind={info.kind} day={weather.day} /></span>
+        <span>{weather.temp}°</span>
+    {/if}
+{/snippet}
+
 <main
     style:--below="{belowH}px"
     style:--align={side}
@@ -533,6 +550,19 @@
                     </div>
                 {:else if settings.logo === "wordmark"}
                     <HeliumLogo height="44px" text />
+                {:else if settings.logo === "clock"}
+                    <div class="greeting">
+                        <HeliumLogo height="40px" />
+                        <div class="logo-clock">
+                            <p class="logo-time">{time}</p>
+                            <span class="date-line">{@render dateLine()}</span>
+                        </div>
+                    </div>
+                {:else if settings.logo === "bigClock"}
+                    <div class="big-clock">
+                        <span class="date-line big-date">{@render dateLine()}</span>
+                        <span class="big-time">{time}</span>
+                    </div>
                 {:else}
                     <HeliumLogo height="56px" />
                 {/if}
@@ -810,6 +840,50 @@
         letter-spacing: -0.02em;
         line-height: 1.1;
         text-wrap: balance;
+    }
+
+    .logo-clock {
+        display: grid;
+        gap: 2px;
+        text-align: start;
+    }
+
+    /* the same light weight as the big clock, quieter than a greeting */
+    .greeting .logo-time {
+        font-weight: 400;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .date-line {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--secondary);
+        font-size: 14px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* the time takes the logo's place; the date sits above it so the search stays put */
+    /* the date line follows the column to its side (an absolute grid child still aligns) */
+    .big-clock {
+        position: relative;
+        display: grid;
+        place-items: center;
+        justify-items: var(--align, center);
+    }
+
+    .big-time {
+        font-size: 72px;
+        font-weight: 400;
+        letter-spacing: -0.04em;
+        line-height: 56px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .big-date {
+        position: absolute;
+        bottom: calc(100% + 10px);
+        white-space: nowrap;
     }
 
     /* the words settle in a beat after the mark, like a tooltip popping in */
