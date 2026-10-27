@@ -1,11 +1,16 @@
-// The custom wallpaper lives in IndexedDB, not in the synced settings: it is far too big
-// for chrome.storage. It is downscaled on import, so it stays cheap to decode and draw.
+// The custom wallpapers live in IndexedDB, not in the synced settings: they are far too big
+// for chrome.storage. They are downscaled on import, so they stay cheap to decode and draw.
+// localStorage holds the small index (ids, looks, which one is on) that the first frame
+// needs synchronously.
 import { t } from "./i18n";
+import { loadCached } from "./storage.svelte";
 const DB = "shimmer-tab";
 const STORE = "kv";
-const KEY = "wallpaper";
-const ANIM = "wallpaper-anim";
-const LOOK = "wallpaper-look"; // localStorage: the first frame needs it synchronously
+const OLD = "wallpaper"; // before several pictures: one still...
+const OLD_ANIM = "wallpaper-anim"; // ...and its GIF
+const OLD_LOOK = "wallpaper-look";
+const SET = "wallpaper-set";
+const blobKey = (id: string) => `wp:${id}`;
 const MAX = 2560;
 
 function open(): Promise<IDBDatabase> {
@@ -130,21 +135,72 @@ async function gifFrames(file: File): Promise<ImageBitmap[]> {
     }
 }
 
+type Index = { ids: string[]; looks: Record<string, Look>; cur: string | null; at: number };
+
 function readLook(): Look | null {
     try {
-        const look = JSON.parse(localStorage.getItem(LOOK) ?? "null");
+        const look = JSON.parse(localStorage.getItem(OLD_LOOK) ?? "null");
         return look?.scrim?.length === BLURS.length ? look : null;
     } catch {
         return null;
     }
 }
 
-/** the wallpaper: `url` is a still (a GIF's first frame), `animUrl` the GIF itself */
-export const wallpaper = $state<{ url: string | null; animUrl: string | null; look: Look | null; loaded: boolean }>({
+function readIndex(): Index | null {
+    try {
+        const index = JSON.parse(localStorage.getItem(SET) ?? "null");
+        return Array.isArray(index?.ids) ? { looks: {}, cur: null, at: 0, ...index } : null;
+    } catch {
+        return null;
+    }
+}
+
+function writeIndex() {
+    try {
+        localStorage.setItem(SET, JSON.stringify(index));
+    } catch {}
+}
+
+const PERIOD = { tab: 0, hour: 3600e3, day: 86400e3 };
+
+/** the picture to show now: the same one until it is due, then the next in order or a random other */
+function choose(index: Index): string | null {
+    const { wallpaperEvery: every, wallpaperOrder: order } = loadCached();
+    const { ids, cur } = index;
+    if (!ids.length) return null;
+    if (cur && ids.includes(cur) && Date.now() - index.at < PERIOD[every] && index.at <= Date.now()) return cur;
+    const at = cur ? ids.indexOf(cur) : -1;
+    if (order === "order" || ids.length < 2) return ids[(at + 1) % ids.length];
+    const rest = ids.filter((id) => id !== cur);
+    return rest[Math.floor(Math.random() * rest.length)];
+}
+
+let index: Index = readIndex() ?? { ids: [], looks: {}, cur: null, at: 0 };
+{
+    const next = choose(index);
+    if (next !== index.cur) {
+        index.cur = next;
+        index.at = Date.now();
+        if (index.ids.length) writeIndex();
+    }
+}
+
+/** the wallpaper on screen: `url` is a still (a GIF's first frame), `animUrl` the GIF itself;
+ * `items` are all the pictures, as stills, for the settings */
+export const wallpaper = $state<{
+    id: string | null;
+    url: string | null;
+    animUrl: string | null;
+    look: Look | null;
+    loaded: boolean;
+    items: { id: string; url: string }[];
+}>({
+    id: null,
     url: null,
     animUrl: null,
-    look: readLook(),
+    look: (index.cur && index.looks[index.cur]) || (readIndex() ? null : readLook()),
     loaded: false,
+    items: [],
 });
 
 /** scheme, veil and halo for this blur level */
@@ -154,34 +210,116 @@ export function lookAt(blur: number) {
     return { light: look.light, scrim: look.scrim[i], halo: look.halo[i] };
 }
 
-function show(still: Blob | null, anim: Blob | null) {
+type Entry = { still: Blob; anim?: Blob };
+
+function show(entry: Entry | null) {
     if (wallpaper.url) URL.revokeObjectURL(wallpaper.url);
     if (wallpaper.animUrl) URL.revokeObjectURL(wallpaper.animUrl);
-    wallpaper.url = still ? URL.createObjectURL(still) : null;
-    wallpaper.animUrl = anim ? URL.createObjectURL(anim) : null;
+    wallpaper.url = entry ? URL.createObjectURL(entry.still) : null;
+    wallpaper.animUrl = entry?.anim ? URL.createObjectURL(entry.anim) : null;
+    wallpaper.id = entry ? index.cur : null;
+    wallpaper.look = (index.cur && index.looks[index.cur]) || null;
     wallpaper.loaded = true;
+}
+
+async function transact(work: (store: IDBObjectStore) => void) {
+    const db = await open();
+    try {
+        await new Promise<void>((resolve, reject) => {
+            const tx = db.transaction(STORE, "readwrite");
+            work(tx.objectStore(STORE));
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject(tx.error);
+        });
+    } finally {
+        db.close();
+    }
+}
+
+const get = (id: string) => run<Entry | undefined>("readonly", (s) => s.get(blobKey(id)));
+
+let listed = 0;
+
+/** the pictures' stills for the settings grid; the old ones stay up until the new are in */
+async function loadItems() {
+    const run = ++listed;
+    const items: typeof wallpaper.items = [];
+    for (const id of index.ids) {
+        const entry = await get(id).catch(() => undefined);
+        if (entry) items.push({ id, url: URL.createObjectURL(entry.still) });
+    }
+    // a newer call (another picture added meanwhile) has the fresher list
+    const stale = run === listed ? wallpaper.items : items;
+    if (run === listed) wallpaper.items = items;
+    for (const item of stale) URL.revokeObjectURL(item.url);
+}
+
+/** one picture from before the list, or an index that localStorage lost: rebuilt from what IndexedDB holds */
+async function recover() {
+    const [still, anim] = await Promise.all([
+        run<Blob | undefined>("readonly", (s) => s.get(OLD)),
+        run<Blob | undefined>("readonly", (s) => s.get(OLD_ANIM)),
+    ]);
+    if (still) {
+        const id = crypto.randomUUID();
+        const entry: Entry = anim ? { still, anim } : { still };
+        // tabs restored together all migrate at once: only the first one still finds the old key
+        await transact((s) => {
+            const old = s.get(OLD);
+            old.onsuccess = () => {
+                if (!old.result) return;
+                s.put(entry, blobKey(id));
+                s.delete(OLD);
+                s.delete(OLD_ANIM);
+            };
+        });
+        index.looks[id] = readLook() ?? (await lookOf(still));
+    }
+    const keys = await run<IDBValidKey[]>("readonly", (s) => s.getAllKeys());
+    const ids = keys.flatMap((k) => (typeof k === "string" && k.startsWith("wp:") ? [k.slice(3)] : []));
+    const looks: Index["looks"] = {};
+    for (const id of ids) {
+        const entry = await get(id);
+        looks[id] = index.looks[id] ?? (entry ? await lookOf(entry.still) : WORST);
+    }
+    index.looks = looks;
+    index.ids = ids;
+    index.cur = choose(index);
+    index.at = Date.now();
+    writeIndex();
+    try {
+        localStorage.removeItem(OLD_LOOK);
+    } catch {}
+}
+
+async function lookOf(still: Blob): Promise<Look> {
+    const bitmap = await createImageBitmap(still).catch(() => null);
+    if (!bitmap) return WORST;
+    const look = judge([bitmap]);
+    bitmap.close();
+    return look;
 }
 
 export async function loadWallpaper() {
     if (wallpaper.loaded) return;
     try {
-        const [still, anim] = await Promise.all([
-            run<Blob | undefined>("readonly", (s) => s.get(KEY)),
-            run<Blob | undefined>("readonly", (s) => s.get(ANIM)),
-        ]);
-        show(still ?? null, anim ?? null);
+        if (!readIndex()) await recover();
+        const entry = index.cur ? await get(index.cur) : undefined;
+        show(entry ?? null);
     } catch {
-        show(null, null);
+        show(null);
     }
+    loadItems();
 }
 
 const MAX_GIF = 25 * 1024 * 1024;
 
 /**
- * Stores the picture: stills are downscaled to at most 2560 px WebP; a GIF is kept as it is
- * (animated) with its first frame as the still. Returns an error message, or null.
+ * Adds a picture and makes it the one on screen: stills are downscaled to at most 2560 px
+ * WebP; a GIF is kept as it is (animated) with its first frame as the still. Returns an
+ * error message, or null.
  */
-export async function setWallpaper(file: File): Promise<string | null> {
+export async function addWallpaper(file: File): Promise<string | null> {
     const gif = file.type === "image/gif";
     if (gif && file.size > MAX_GIF) return t("gif_too_big");
     try {
@@ -201,27 +339,43 @@ export async function setWallpaper(file: File): Promise<string | null> {
         for (const frame of frames) frame.close();
         bitmap.close();
 
-        const db = await open();
-        try {
-            await new Promise<void>((resolve, reject) => {
-                const tx = db.transaction(STORE, "readwrite");
-                const store = tx.objectStore(STORE);
-                store.put(still, KEY);
-                if (gif) store.put(file, ANIM);
-                else store.delete(ANIM);
-                tx.oncomplete = () => resolve();
-                tx.onerror = () => reject(tx.error);
-            });
-        } finally {
-            db.close();
-        }
-        try {
-            localStorage.setItem(LOOK, JSON.stringify(look));
-        } catch {}
-        wallpaper.look = look;
-        show(still, gif ? file : null);
+        if (!wallpaper.loaded) await loadWallpaper();
+        const id = crypto.randomUUID();
+        const entry: Entry = gif ? { still, anim: file } : { still };
+        await transact((s) => void s.put(entry, blobKey(id)));
+        index.ids.push(id);
+        index.looks[id] = look;
+        index.cur = id;
+        index.at = Date.now();
+        writeIndex();
+        show(entry);
+        loadItems();
         return null;
     } catch {
         return t("not_an_image");
     }
+}
+
+/** puts this picture on screen now */
+export async function selectWallpaper(id: string) {
+    const entry = await get(id).catch(() => undefined);
+    if (!entry) return;
+    index.cur = id;
+    index.at = Date.now();
+    writeIndex();
+    show(entry);
+}
+
+export async function removeWallpaper(id: string) {
+    await transact((s) => void s.delete(blobKey(id))).catch(() => {});
+    const gone = index.cur === id;
+    index.ids = index.ids.filter((x) => x !== id);
+    delete index.looks[id];
+    if (gone) {
+        index.cur = index.ids.length ? index.ids[Math.floor(Math.random() * index.ids.length)] : null;
+        index.at = Date.now();
+    }
+    writeIndex();
+    if (gone) show(index.cur ? ((await get(index.cur).catch(() => undefined)) ?? null) : null);
+    loadItems();
 }

@@ -103,6 +103,19 @@
     };
 
     let canvas: HTMLCanvasElement | undefined = $state();
+    // A resized canvas is cleared until the next frame. Frameless windows resize the page
+    // whenever the toolbar slides in, so the canvas grows but keeps its size for such small
+    // shrinks; a window made much smaller gets a canvas its size again (one blink, once).
+    let box = $state({ w: innerWidth, h: innerHeight });
+    $effect(() => {
+        const grow = () => {
+            if (innerWidth < box.w * 0.8 || innerHeight < box.h * 0.8) box = { w: innerWidth, h: innerHeight };
+            else if (innerWidth > box.w || innerHeight > box.h)
+                box = { w: Math.max(box.w, innerWidth), h: Math.max(box.h, innerHeight) };
+        };
+        addEventListener("resize", grow);
+        return () => removeEventListener("resize", grow);
+    });
     let atmosphere: import("@takustaqu/atmosphere").Atmosphere | undefined = $state();
     let ready = $state(false);
 
@@ -152,7 +165,7 @@
 </script>
 
 <div class="sky" aria-hidden="true">
-    <canvas bind:this={canvas} style:opacity={ready ? gain : 0}></canvas>
+    <canvas bind:this={canvas} style:opacity={ready ? gain : 0} style:width="{box.w}px" style:height="{box.h}px"></canvas>
 </div>
 
 <style>
@@ -168,9 +181,8 @@
 
     canvas {
         position: absolute;
-        inset: 0;
-        width: 100%;
-        height: 100%;
+        top: 0;
+        left: 0;
         transition: opacity 1.5s ease;
         mix-blend-mode: screen;
     }

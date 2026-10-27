@@ -2,7 +2,7 @@
     import { t } from "./i18n";
     import { Button, Text } from "@imput/helium-prism";
     import { pop } from "./motion";
-    import { parseShortcuts, type Shortcut } from "./storage.svelte";
+    import { countLinks, parseShortcuts, type Shortcut } from "./storage.svelte";
 
     type Props = {
         items: Shortcut[];
@@ -16,6 +16,7 @@
     let fileInput: HTMLInputElement | undefined = $state();
     let area: HTMLTextAreaElement | undefined = $state();
     const found = $derived(text.trim() ? parseShortcuts(text) : []);
+    const count = $derived(countLinks(found));
 
     $effect(() => area?.focus());
 
@@ -51,9 +52,9 @@
     </label>
     <p class="hint" class:ready={found.length}>
         {#if found.length}
-            {found.length} {found.length === 1 ? "shortcut" : "shortcuts"} found
+            {count} {count === 1 ? "shortcut" : "shortcuts"} found
         {:else}
-            One link per line, optionally with a name, or a JSON list
+            One link per line, optionally with a name, a JSON list or a Yet Another Speed Dial export
         {/if}
     </p>
     <input

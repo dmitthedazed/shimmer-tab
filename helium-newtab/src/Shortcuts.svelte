@@ -15,7 +15,8 @@
     }
     import SiteIcon from "./SiteIcon.svelte";
     import { forgetIcon } from "./icons";
-    import { normalizeUrl, type Shortcut } from "./storage.svelte";
+    import { isFolder, normalizeUrl, type Shortcut } from "./storage.svelte";
+    import Self from "./Shortcuts.svelte";
 
     type Props = {
         items: Shortcut[];
@@ -33,6 +34,10 @@
         onchange?: () => void;
         /** return true to handle a tile click yourself (the link's href stays for middle-click) */
         onopen?: (index: number, e: MouseEvent) => boolean;
+        /** how deep inside folders this list is */
+        depth?: number;
+        /** inside a folder: take an item back out to the list above */
+        onmoveout?: (item: Shortcut) => void;
     };
 
     let {
@@ -45,22 +50,32 @@
         tint = null,
         onchange,
         onopen,
+        depth = 0,
+        onmoveout,
     }: Props = $props();
 
     let editing: number | null = $state(null); // index, or -1 for a new one
     let title = $state("");
     let url = $state("");
+    let asFolder = $state(false);
+    /** the folder whose contents are showing */
+    let inside: number | null = $state(null);
     let urlInput: HTMLInputElement | undefined = $state();
+    let titleInput: HTMLInputElement | undefined = $state();
     let dragFrom: number | null = $state(null);
     let dragOver: number | null = $state(null);
     let altHeld = $state(false);
+    let nav: HTMLElement | undefined = $state();
+    let panel: HTMLElement | undefined = $state();
+
+    $effect(() => panel?.focus());
 
     // stable keys for animate:flip, even if the same URL is pinned twice
     const keyed = $derived(
         items.map((item, i) => ({
             item,
             i,
-            key: `${item.url}#${items.slice(0, i).filter((x) => x.url === item.url).length}`,
+            key: `${item.url || `folder:${item.title}`}#${items.slice(0, i).filter((x) => x.url === item.url).length}`,
         })),
     );
 
@@ -74,9 +89,10 @@
 
     function open(i: number) {
         editing = i;
+        asFolder = i >= 0 && isFolder(items[i]);
         title = i >= 0 ? items[i].title : "";
         url = i >= 0 ? items[i].url : "";
-        queueMicrotask(() => urlInput?.focus());
+        queueMicrotask(() => (asFolder ? titleInput : urlInput)?.focus());
     }
 
     function close() {
@@ -85,6 +101,17 @@
 
     function submit(e: SubmitEvent) {
         e.preventDefault();
+        if (asFolder && editing !== null) {
+            const name = title.trim() || t("folder");
+            if (editing >= 0) items[editing].title = name;
+            else {
+                items.push({ title: name, url: "", items: [] });
+                inside = items.length - 1;
+            }
+            close();
+            onchange?.();
+            return;
+        }
         const normalized = normalizeUrl(url);
         if (!normalized || editing === null) return;
         const entry = { title: title.trim() || host(normalized), url: normalized };
@@ -98,7 +125,15 @@
         onchange?.();
     }
 
+    function moveOut(i: number) {
+        const [moved] = items.splice(i, 1);
+        onmoveout?.($state.snapshot(moved));
+        close();
+        onchange?.();
+    }
+
     function remove(i: number) {
+        if (inside === i) inside = null;
         items.splice(i, 1);
         close();
         onchange?.();
@@ -106,6 +141,14 @@
 
     function drop(to: number) {
         if (dragFrom === null || dragFrom === to) return;
+        // dropped on a folder: goes inside it
+        const target = items[to];
+        if (isFolder(target) && !isFolder(items[dragFrom])) {
+            const [moved] = items.splice(dragFrom, 1);
+            target.items!.push(moved);
+            onchange?.();
+            return;
+        }
         const [moved] = items.splice(dragFrom, 1);
         items.splice(to, 0, moved);
         onchange?.();
@@ -114,7 +157,15 @@
 
 <svelte:window
     onkeydown={(e) => {
-        if (e.key === "Escape" && editing !== null) close();
+        if (e.key === "Escape" && (editing !== null || inside !== null)) {
+            // every list in an open folder hears the key, the outer ones first: only the
+            // deepest open thing closes (a dialog before the folder it sits on)
+            const level = depth * 2 + (editing !== null ? 1 : 0);
+            const esc = e as KeyboardEvent & { level?: number };
+            esc.level = Math.max(esc.level ?? -1, level);
+            e.preventDefault();
+            setTimeout(() => esc.level === level && (editing !== null ? close() : (inside = null)));
+        }
         if (e.key === "Alt") altHeld = true;
     }}
     onkeyup={(e) => {
@@ -123,7 +174,7 @@
     onblur={() => (altHeld = false)}
 />
 
-<nav class={["shortcuts", !titles && "compact"]} aria-label={label}>
+<nav bind:this={nav} class={["shortcuts", !titles && "compact"]} aria-label={label}>
     {#each keyed as { item, i, key } (key)}
         <div
             class={["tile-wrap", dragFrom === i && "dragging", dragOver === i && dragFrom !== i && "over"]}
@@ -146,8 +197,30 @@
                 e.preventDefault();
                 drop(i);
             }}
-            ondragend={() => (dragFrom = dragOver = null)}
+            ondragend={(e) => {
+                // let go outside the folder window: the tile leaves the folder
+                const panel = nav?.closest(".folder")?.getBoundingClientRect();
+                const out = panel && (e.clientX < panel.left || e.clientX > panel.right || e.clientY < panel.top || e.clientY > panel.bottom);
+                if (onmoveout && out && dragFrom !== null && !isFolder(items[dragFrom])) moveOut(dragFrom);
+                dragFrom = dragOver = null;
+            }}
         >
+            {#if isFolder(item)}
+                <button type="button" class="button transparent tile" onclick={() => (inside = i)} title={item.title || t("folder")} aria-label={item.title || t("folder")}>
+                    <span class="folder-icon" aria-hidden="true">
+                        {#each (item.items ?? []).slice(0, 4) as sub}
+                            {#if !isFolder(sub)}
+                                <SiteIcon url={sub.url} title={sub.title} size={18} {tint} />
+                            {:else}
+                                <span class="mini-folder"></span>
+                            {/if}
+                        {/each}
+                    </span>
+                    {#if titles}
+                        <span class="title" transition:collapse>{item.title || t("folder")}</span>
+                    {/if}
+                </button>
+            {:else}
             <a class="button transparent tile" href={item.url} draggable="false" onclick={(e) => (onopen?.(i, e) || openInternal(item.url, e.ctrlKey || e.metaKey)) && e.preventDefault()}
                 onauxclick={(e) => e.button === 1 && openInternal(item.url, true) && e.preventDefault()} title={titles ? item.url : item.title || host(item.url)} aria-label={item.title || host(item.url)}>
                 <SiteIcon url={item.url} title={item.title} {contained} {tint} />
@@ -155,12 +228,13 @@
                     <span class="title" transition:collapse>{item.title || host(item.url)}</span>
                 {/if}
             </a>
+            {/if}
             {#if !readonly}
                 <button type="button" class="circle edit" aria-label={t("edit_name", { name: item.title })} onclick={() => open(i)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /><path d="M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0" /></svg>
                 </button>
             {/if}
-            {#if numbers && altHeld && i < 9}
+            {#if numbers && altHeld && i < 9 && !isFolder(item)}
                 <span class="hint" aria-hidden="true" transition:pop>{i + 1}</span>
             {/if}
         </div>
@@ -183,25 +257,61 @@
 {#if editing !== null}
     <div class="scrim" role="presentation" onclick={close} transition:pop={{ from: 1 }}></div>
     <form class="dialog" onsubmit={submit} transition:pop>
-        <Text variant="subheading">{editing >= 0 ? t("edit_shortcut") : t("add_shortcut")}</Text>
-        <Input bind:value={title} aria-label={t("name")} placeholder={t("name")} />
-        <Input
-            bind:value={url}
-            bind:input={urlInput}
-            aria-label="URL"
-            placeholder="example.com"
-            spellcheck="false"
-            autocapitalize="off"
-        />
+        <Text variant="subheading">
+            {asFolder ? (editing >= 0 ? t("edit_folder") : t("new_folder")) : editing >= 0 ? t("edit_shortcut") : t("add_shortcut")}
+        </Text>
+        <Input bind:value={title} bind:input={titleInput} aria-label={t("name")} placeholder={t("name")} />
+        {#if !asFolder}
+            <Input
+                bind:value={url}
+                bind:input={urlInput}
+                aria-label="URL"
+                placeholder="example.com"
+                spellcheck="false"
+                autocapitalize="off"
+            />
+        {/if}
         <div class="actions">
             {#if editing >= 0}
                 <Button transparent onclick={() => remove(editing!)}>{t("remove")}</Button>
+                {#if onmoveout && !asFolder}
+                    <Button transparent onclick={() => moveOut(editing!)}>{t("move_out")}</Button>
+                {/if}
+            {:else if depth < 2}
+                <Button
+                    transparent
+                    onclick={() => {
+                        asFolder = !asFolder;
+                        queueMicrotask(() => (asFolder ? titleInput : urlInput)?.focus());
+                    }}>{asFolder ? t("add_shortcut") : t("new_folder")}</Button
+                >
             {/if}
             <span class="spacer"></span>
             <Button onclick={close}>{t("cancel")}</Button>
-            <Button primary type="submit" disabled={!normalizeUrl(url)}>{t("save")}</Button>
+            <Button primary type="submit" disabled={!asFolder && !normalizeUrl(url)}>{t("save")}</Button>
         </div>
     </form>
+{/if}
+
+{#if inside !== null && items[inside] && isFolder(items[inside])}
+    <div class="scrim" role="presentation" onclick={() => (inside = null)} transition:pop={{ from: 1 }}></div>
+    <div bind:this={panel} class="folder" role="dialog" aria-modal="true" aria-label={items[inside].title || t("folder")} tabindex="-1" transition:pop>
+        <Text variant="subheading">{items[inside].title || t("folder")}</Text>
+        <Self
+            bind:items={items[inside].items!}
+            {readonly}
+            {contained}
+            {titles}
+            {tint}
+            {onchange}
+            label={items[inside].title || t("folder")}
+            depth={depth + 1}
+            onmoveout={(moved) => {
+                items.push(moved);
+                onchange?.();
+            }}
+        />
+    </div>
 {/if}
 
 <style>
@@ -282,11 +392,13 @@
     }
 
     /* the plate under "+" darkens with the halo, so the icon holds on a bright picture */
-    :global(:root[data-picture]) .add-icon {
+    :global(:root[data-picture]) .add-icon,
+    :global(:root[data-picture]) .folder-icon {
         background: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-7));
     }
 
-    :global(:root[data-picture]) .add:hover .add-icon {
+    :global(:root[data-picture]) .add:hover .add-icon,
+    :global(:root[data-picture]) .tile:hover .folder-icon {
         background: color-mix(in srgb, var(--background) calc(var(--halo) * 100%), var(--helium-elevated-10));
     }
 
@@ -384,7 +496,61 @@
         translate: -50% -50%;
     }
 
-    .dialog :global(h4) {
+    /* no translate: the dialogs of the list inside are fixed too, and must stay relative to the window */
+    .folder {
+        position: fixed;
+        inset: 0;
+        z-index: 11;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--gap-2);
+        width: min(calc(100vw - 32px), 560px);
+        height: fit-content;
+        max-height: calc(100dvh - 64px);
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        margin: auto;
+        padding: var(--gap-4);
+        border-radius: var(--card-border-radius);
+        background: var(--background);
+        outline: 1.5px solid var(--helium-elevated-10);
+        outline-offset: -1.5px;
+        box-shadow: 4px 4px 24px 0 var(--tooltip-shadow);
+    }
+
+    .folder-icon {
+        display: grid;
+        grid-template-columns: repeat(2, 18px);
+        grid-auto-rows: 18px;
+        place-content: center;
+        gap: 4px;
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        background: var(--helium-elevated-7);
+        transition: background-color 0.2s, scale 0.2s;
+    }
+
+    .tile:hover .folder-icon {
+        background: var(--helium-elevated-10);
+    }
+
+    /* a tile held over a folder goes into it */
+    .tile-wrap.over .folder-icon {
+        background: var(--helium-elevated-15);
+        scale: 1.08;
+    }
+
+    .mini-folder {
+        width: 18px;
+        height: 18px;
+        border-radius: 5px;
+        background: var(--helium-elevated-10);
+    }
+
+    .dialog :global(h4),
+    .folder > :global(h4) {
         margin: 0 0 4px;
         font-size: 18px;
         font-weight: 600;

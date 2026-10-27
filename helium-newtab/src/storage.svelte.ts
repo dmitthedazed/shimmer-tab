@@ -1,9 +1,19 @@
-export type Shortcut = { title: string; url: string };
+/** a link, or a folder of links: `items` set and `url` empty */
+export type Shortcut = { title: string; url: string; items?: Shortcut[] };
+
+export const isFolder = (s: Shortcut) => Array.isArray(s.items);
+/** how many links a list holds, folders opened up */
+export const countLinks = (list: Shortcut[]): number =>
+    list.reduce((n, s) => n + (s.items ? countLinks(s.items) : 1), 0);
 
 export type Settings = {
     background: "shimmer" | "stars" | "weather" | "image" | "random" | "none";
     /** blur of the picture wallpaper, in px */
     imageBlur: number;
+    /** with several pictures: how often the next one comes up */
+    wallpaperEvery: "tab" | "hour" | "day";
+    /** and which one comes next */
+    wallpaperOrder: "random" | "order";
     clock: boolean;
     hour12: boolean;
     seconds: boolean;
@@ -17,6 +27,12 @@ export type Settings = {
     logoShown: boolean;
     /** Chrome's mark instead of Helium's, for those on Chrome */
     chromeLogo: boolean;
+    /** where searches go: the browser's own engine, one from engines.ts, or "custom" */
+    engine: string;
+    /** custom engine's search URL, with %s for the query */
+    customEngine: string;
+    /** suggestions from the engine while typing (asks the engine's server) */
+    suggestions: boolean;
     /** a result line under the search for math and unit conversions */
     answers: boolean;
     /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
@@ -51,6 +67,8 @@ export type Settings = {
 export const defaults: Settings = {
     background: "shimmer",
     imageBlur: 0,
+    wallpaperEvery: "tab",
+    wallpaperOrder: "random",
     clock: true,
     hour12: false,
     seconds: false,
@@ -60,6 +78,9 @@ export const defaults: Settings = {
     searchShown: true,
     logoShown: true,
     chromeLogo: false,
+    engine: "browser",
+    customEngine: "",
+    suggestions: false,
     answers: true,
     logo: "greeting",
     align: "center",
@@ -90,6 +111,17 @@ const hasChrome = typeof chrome !== "undefined" && !!chrome.storage?.sync;
 
 const MIRROR = "settings-mirror";
 
+const MAX_DEPTH = 3;
+
+function cleanLinks(list: Shortcut[], depth = 0): Shortcut[] {
+    return list.flatMap((link) => {
+        if (Array.isArray(link?.items) && depth < MAX_DEPTH)
+            return [{ title: String(link.title ?? ""), url: "", items: cleanLinks(link.items, depth + 1) }];
+        const url = typeof link?.url === "string" ? normalizeUrl(link.url) : null;
+        return url ? [{ title: String(link.title ?? ""), url }] : [];
+    });
+}
+
 export function normalize(raw: Record<string, unknown> | null | undefined): Settings {
     const settings = { ...defaults, ...(raw ?? {}) } as Settings;
     // pre-1.1 had a plain shimmer on/off toggle
@@ -100,12 +132,7 @@ export function normalize(raw: Record<string, unknown> | null | undefined): Sett
         settings.logo = Object.keys(raw).length ? (raw.logoText === false ? "mark" : "wordmark") : defaults.logo;
     delete (settings as { logoText?: boolean }).logoText;
     // imported backups go through here too: only links that open as pages
-    if (Array.isArray(settings.links)) {
-        settings.links = settings.links.flatMap((link) => {
-            const url = typeof link?.url === "string" ? normalizeUrl(link.url) : null;
-            return url ? [{ title: String(link.title ?? ""), url }] : [];
-        });
-    } else settings.links = [...defaults.links];
+    settings.links = Array.isArray(settings.links) ? cleanLinks(settings.links) : [...defaults.links];
     return settings;
 }
 
@@ -221,6 +248,35 @@ export function parseShortcuts(text: string): Shortcut[] {
             return rest.length ? make(first, rest.at(-1)) : make(undefined, first);
         });
     }
+    const yasd = (json as { yasd?: Yasd } | null)?.yasd;
+    if (Array.isArray(yasd?.bookmarks)) return fromYasd(yasd!, make);
     const list = Array.isArray(json) ? json : Array.isArray((json as { shortcuts?: unknown })?.shortcuts) ? (json as { shortcuts: unknown[] }).shortcuts : [];
     return list.flatMap((x: { title?: string; name?: string; url?: unknown }) => make(x?.title || x?.name, x?.url));
+}
+
+type Yasd = {
+    bookmarks: { id?: string; title?: string; url?: unknown; index?: number; folderid?: string }[];
+    folders?: { id: string; title?: string; index?: number; parentFolderid?: string | null }[];
+};
+
+/** Yet Another Speed Dial's export: bookmarks and folders by parent id, rebuilt as a tree */
+function fromYasd(yasd: Yasd, make: (title: string | undefined, raw: unknown) => Shortcut[]): Shortcut[] {
+    const folders = yasd.folders ?? [];
+    const ids = new Set(folders.map((f) => f.id));
+    const byIndex = (a: { index?: number }, b: { index?: number }) => (a.index ?? 0) - (b.index ?? 0);
+    // a folder's parent that isn't exported (the speed dial root itself) means the top level
+    const within = (parent: string | null | undefined, id: string | null) => (parent && ids.has(parent) ? parent : null) === id;
+    const build = (id: string | null, depth: number): Shortcut[] => {
+        const here = [
+            ...folders.filter((f) => within(f.parentFolderid, id)).map((f) => ({ index: f.index, folder: f })),
+            ...yasd.bookmarks.filter((b) => within(b.folderid, id)).map((b) => ({ index: b.index, bookmark: b })),
+        ].sort(byIndex);
+        return here.flatMap((node) => {
+            if ("bookmark" in node) return make(node.bookmark.title, node.bookmark.url);
+            if (depth >= MAX_DEPTH) return [];
+            const items = build(node.folder.id, depth + 1);
+            return items.length ? [{ title: node.folder.title?.trim() || "Folder", url: "", items }] : [];
+        });
+    };
+    return build(null, 0);
 }

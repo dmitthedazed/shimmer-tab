@@ -13,6 +13,7 @@
         Tooltip,
         IconBang,
     } from "@imput/helium-prism";
+    import { searchUrl, suggestEndpoint, suggestions } from "./engines";
     import { hasBang, resolveBang, resolveBangAsync, suggestBangs } from "./bangs.svelte";
     import { answer } from "./calc";
     import { openInternal } from "./open";
@@ -183,12 +184,15 @@
     if (starsEntrance) setTimeout(() => (starsArrived = true), 1000); // never stay hidden
 
     // the shimmer's intro reveal is for page load only, not for switching to it
-    let bgSwitched = false;
-    let firstBg: string | null = null;
+    // (derived, so the new wallpaper already reads it as it mounts: an effect would set it a
+    // frame too late and the shimmer would play its intro under the transition, a blink)
+    let firstBg: string | null = $state(null);
+    let switchedOnce = $state(false);
+    const bgSwitched = $derived(switchedOnce || (firstBg !== null && bg !== firstBg));
     $effect(() => {
         if (!ready) return;
         firstBg ??= bg;
-        if (bg !== firstBg) bgSwitched = true;
+        if (bgSwitched) switchedOnce = true;
     });
 
 
@@ -365,7 +369,7 @@
         const target = e.target as HTMLElement | null;
         if (target?.closest("input, textarea, select, [contenteditable]")) return false;
         const link = settings.links[Number(m[1]) - 1];
-        if (!link) return false;
+        if (!link?.url) return false;
         const newTab = e.ctrlKey || e.metaKey;
         if (openInternal(link.url, newTab)) return true;
         if (newTab) window.open(link.url, "_blank", "noopener");
@@ -408,7 +412,50 @@
         searchInput?.focus();
     }
 
+    // Engine suggestions: asked for only when switched on, a moment after typing stops
+    let suggested: string[] = $state([]);
+    let sugIndex = $state(-1);
+    let sugDismissed = $state("");
+    $effect(() => {
+        const text = query.trim();
+        const engine = settings.engine;
+        suggested = [];
+        sugIndex = -1;
+        if (!settings.suggestions || !suggestEndpoint(engine) || !text || keyword || bangPrefix !== null) return;
+        const ctl = new AbortController();
+        const timer = setTimeout(() => {
+            suggestions(engine, text, ctl.signal).then(
+                (list) => (suggested = list.filter((s) => s !== text)),
+                () => {},
+            );
+        }, 150);
+        return () => {
+            clearTimeout(timer);
+            ctl.abort();
+        };
+    });
+    const shownSuggestions = $derived(sugDismissed === query || !searchFocused ? [] : suggested);
+
     function onSearchKey(e: KeyboardEvent) {
+        if (!bangSuggestions.length && shownSuggestions.length) {
+            const n = shownSuggestions.length;
+            if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                e.preventDefault();
+                sugIndex = e.key === "ArrowDown" ? (sugIndex + 1) % n : (sugIndex + n) % n;
+                return;
+            }
+            if (e.key === "Enter" && sugIndex >= 0) {
+                e.preventDefault();
+                query = shownSuggestions[sugIndex];
+                run();
+                return;
+            }
+            if (e.key === "Escape") {
+                e.preventDefault();
+                sugDismissed = query;
+                return;
+            }
+        }
         if (bangSuggestions.length) {
             const n = bangSuggestions.length;
             if (e.key === "ArrowDown" || e.key === "ArrowUp") {
@@ -498,8 +545,12 @@
         });
     });
 
-    async function search(e: SubmitEvent) {
+    function search(e: SubmitEvent) {
         e.preventDefault();
+        run();
+    }
+
+    async function run() {
         if (result) {
             const value = result.value;
             navigator.clipboard?.writeText(value).catch(() => {});
@@ -519,6 +570,8 @@
         const asUrl = /^\S+\.\S+$/.test(text) && !text.includes(" ") ? normalizeUrl(text) : null;
         if (asUrl) {
             location.href = asUrl;
+        } else if (searchUrl(settings.engine, settings.customEngine, text)) {
+            location.href = searchUrl(settings.engine, settings.customEngine, text)!;
         } else if (typeof chrome !== "undefined" && chrome.search) {
             chrome.search.query({ text, disposition: "CURRENT_TAB" });
         } else {
@@ -737,6 +790,28 @@
                             </span>
                             <span class="bang-trigger">!{item.trigger}</span>
                             <span class="bang-service">{item.service}</span>
+                        </button>
+                    </li>
+                {/each}
+            </ul>
+        {/if}
+
+        {#if shownSuggestions.length}
+            <ul class="bang-list" role="listbox" aria-label={t("suggestions")} transition:pop={{ from: 0.96, duration: 150 }}>
+                {#each shownSuggestions as item, i (item)}
+                    <li role="option" aria-selected={i === sugIndex}>
+                        <button
+                            type="button"
+                            class={["bang-item", i === sugIndex && "active"]}
+                            onpointerenter={() => (sugIndex = i)}
+                            onpointerdown={(e) => e.preventDefault()}
+                            onclick={() => {
+                                query = item;
+                                run();
+                            }}
+                        >
+                            <span class="bang-icon"><IconSearch /></span>
+                            <span class="bang-service">{item}</span>
                         </button>
                     </li>
                 {/each}

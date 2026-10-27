@@ -46,6 +46,16 @@ export async function grant(kind: Access) {
     }
 }
 
+/** Reading one site, e.g. an engine's suggestions. Call straight from a click, like `grant`. */
+export async function grantOrigin(url: string) {
+    if (!api) return true;
+    try {
+        return await api.request({ origins: [`${new URL(url).origin}/*`] });
+    } catch {
+        return false;
+    }
+}
+
 export async function revoke(kind: Access) {
     if (!api) return;
     try {

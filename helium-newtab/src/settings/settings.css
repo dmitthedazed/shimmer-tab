@@ -1,0 +1,11 @@
+/* small pieces every settings tab uses */
+.s-note {
+    margin: 0;
+    padding: 0 var(--gap-1);
+    color: var(--tertiary);
+    font-size: 13px;
+}
+
+.s-file {
+    display: none;
+}
