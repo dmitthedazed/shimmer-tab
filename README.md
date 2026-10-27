@@ -10,7 +10,12 @@ A new tab page for the [Helium](https://helium.computer) browser, built with Hel
 [![Release](https://img.shields.io/github/v/release/dmitthedazed/shimmer-tab?style=flat-square&color=8ab4f8)](https://github.com/dmitthedazed/shimmer-tab/releases/latest)
 [![License: GPL-3.0](https://img.shields.io/badge/license-GPL--3.0-lightgrey?style=flat-square)](LICENSE)
 
-**[Install](https://chromewebstore.google.com/detail/acgnlhjcipkagocfggidelbghodlddmm)** · **[Try it in the browser](https://dmitthedazed.github.io/shimmer-tab/)**
+<a href="https://chromewebstore.google.com/detail/acgnlhjcipkagocfggidelbghodlddmm"><picture>
+  <source media="(prefers-color-scheme: dark)" srcset="previews/chrome-web-store-border.png">
+  <img src="previews/chrome-web-store.png" alt="Available in the Chrome Web Store" width="206">
+</picture></a>
+
+or **[try it in the browser](https://dmitthedazed.github.io/shimmer-tab/)**
 
 <img src="previews/gifs/warp.gif" alt="Opening a tab on the starfield: dropping out of hyperspace">
 
