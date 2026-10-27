@@ -1,0 +1,34 @@
+name: Bug report
+description: Something looks or works wrong
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got. A screenshot helps.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Extension, Web version]
+    validations:
+      required: true
+
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Helium 0.6, Fedora 43
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Shimmer Tab version
+      description: From helium://extensions
+      placeholder: 1.1.1

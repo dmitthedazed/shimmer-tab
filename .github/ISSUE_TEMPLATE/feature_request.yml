@@ -1,0 +1,11 @@
+name: Feature request
+description: A new widget, wallpaper, setting or anything else
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Idea
+      description: What should Shimmer Tab do? Sketches and references welcome.
+    validations:
+      required: true
