@@ -21,6 +21,8 @@
     import Stars from "./Stars.svelte";
     import WeatherBg, { skyFor, type Sky } from "./WeatherBg.svelte";
     import ImageBg from "./ImageBg.svelte";
+    import UpdateNotice from "./UpdateNotice.svelte";
+    import { checkLatest, dismiss, updatedNotice, type Notice } from "./updates";
     import { lookAt } from "./wallpaper.svelte";
     import Shortcuts from "./Shortcuts.svelte";
     import SiteIcon from "./SiteIcon.svelte";
@@ -120,6 +122,13 @@
         // a frame later, so the outgoing wallpaper has captured its own colors first
         if (switching) requestAnimationFrame(apply);
         else apply();
+    });
+
+    // after an update, a link to what changed; with the check on, a newer release too
+    let notice: Notice | null = $state(updatedNotice());
+    $effect(() => {
+        if (!ready || !settings.updateCheck || notice) return;
+        checkLatest().then((found) => found && (notice = found));
     });
 
     // which wallpaper is on screen, for picking the transition into the next one
@@ -613,6 +622,16 @@
         {/if}
     </div>
 {/key}
+
+{#if notice && !settings.quiet}
+    <UpdateNotice
+        {notice}
+        ondismiss={() => {
+            dismiss(notice!);
+            notice = null;
+        }}
+    />
+{/if}
 
 {#if (barClock || barWeather) && starsArrived && !settings.quiet}
     <header class={["datetime", side && "side", idle && "idle"]} style:--align={side} transition:pop>

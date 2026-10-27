@@ -25,7 +25,9 @@ The page talks to third parties only to show what you asked for:
 | Weather is turned on, or the weather wallpaper is picked | [Open-Meteo](https://open-meteo.com) (geocoding and forecast APIs) | The city name you typed and its coordinates; no device location is used |
 | A shortcut's logo is shown | [svgl.app](https://svgl.app) | Which logo file to download (for example `github_dark.svg`) |
 | "Icons for every site" is turned on | The websites in your shortcuts and most visited list | A normal request for the site's page, web app manifest and icon files, without cookies |
-| You search | Your browser's default search engine, or the site of a bang you used | Your search text, the same as searching from the address bar |
+| "Check for updates" is turned on (off by default) | [GitHub](https://github.com) (releases API) | A plain request for the latest release of this extension, at most once a day; no cookies or identifiers |
+| You search | The search engine you chose in settings (your browser's default unless you pick another), or the site of a bang you used | Your search text, the same as searching from the address bar |
+| "Suggestions" is turned on (off by default) | The suggestion service of the engine you chose | What you type in the search bar, after a short pause, without cookies |
 
 These requests are made only from your browser, directly to those services. Their own
 privacy policies apply to them.

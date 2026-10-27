@@ -1,7 +1,8 @@
 <script lang="ts">
-    import { Button, Link } from "@imput/helium-prism";
+    import { Button, Link, Toggle } from "@imput/helium-prism";
     import { t } from "../i18n";
     import { pop } from "../motion";
+    import { WEB } from "../permissions.svelte";
     import { version } from "../../package.json";
     import { exportSettings, importSettings, resetSettings } from "../backup.svelte";
     import type { Settings } from "../storage.svelte";
@@ -74,6 +75,9 @@
 
 <Section title={t("about")}>
     <List>
+        {#if !WEB}
+            <Toggle bind:checked={settings.updateCheck} onchange={emphasize} name={t("check_for_updates")} desc={t("check_for_updates_desc")} />
+        {/if}
         <Row name="Shimmer Tab" desc={t("version", { version })}>
             <Link href="https://github.com/dmitthedazed/shimmer-tab">GitHub</Link>
         </Row>

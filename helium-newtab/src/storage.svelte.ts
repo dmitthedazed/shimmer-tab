@@ -33,6 +33,8 @@ export type Settings = {
     customEngine: string;
     /** suggestions from the engine while typing (asks the engine's server) */
     suggestions: boolean;
+    /** once a day, ask GitHub whether a newer release is out */
+    updateCheck: boolean;
     /** a result line under the search for math and unit conversions */
     answers: boolean;
     /** next to the mark: a line for the time of day, the "Helium" wordmark, or nothing */
@@ -81,6 +83,7 @@ export const defaults: Settings = {
     engine: "browser",
     customEngine: "",
     suggestions: false,
+    updateCheck: false,
     answers: true,
     logo: "greeting",
     align: "center",
