@@ -1,7 +1,7 @@
 <script lang="ts">
     import { t } from "./i18n";
     import { onMount } from "svelte";
-    import { drop, morphPage, pop, recede, reveal } from "./motion";
+    import { drop, morphPage, pop, recede, reveal, still } from "./motion";
     import { forceScheme, type Forced } from "./scheme.svelte";
     import { perms } from "./permissions.svelte";
     import {
@@ -22,12 +22,14 @@
     import WeatherBg, { skyFor, type Sky } from "./WeatherBg.svelte";
     import ImageBg from "./ImageBg.svelte";
     import UpdateNotice from "./UpdateNotice.svelte";
-    import { checkLatest, dismiss, updatedNotice, type Notice } from "./updates";
-    import { lookAt } from "./wallpaper.svelte";
+    import UndoToast from "./UndoToast.svelte";
+    import { checkLatest, dismiss, fromZip, updatedNotice, type Notice } from "./updates";
+    import { watchFrames } from "./perf";
+    import { lookAt, wallpaper } from "./wallpaper.svelte";
     import Shortcuts from "./Shortcuts.svelte";
     import SiteIcon from "./SiteIcon.svelte";
     import WeatherIcon from "./WeatherIcon.svelte";
-    import { describe, getWeather, peekWeather, type Weather } from "./weather";
+    import { describe, getWeather, peekWeather, weatherProblem, type Weather, type WeatherProblem } from "./weather";
     import { holdGreeting } from "./greetings";
     import {
         loadCached,
@@ -39,6 +41,9 @@
     } from "./storage.svelte";
     import {
         applyBrowserTheme,
+        applySeedTheme,
+        setPictureAccent,
+        pictureSeed,
         hasFileAccess,
         clearBrowserTheme,
         onSchemeChange,
@@ -105,9 +110,14 @@
         root.toggleAttribute("data-picture", !!on);
         root.style.setProperty("--halo", String(on?.halo ?? 0));
     };
+    // Effects slider (Settings → Look), read by lock.css; set now so the first paint has it
+    root.dataset.fx = settings.effects;
+    $effect(() => {
+        root.dataset.fx = settings.effects;
+    });
     forceScheme(mode);
     picture(look);
-    if (settings.browserTheme) refreshBrowserTheme();
+    if (settings.browserTheme || (settings.pictureColors && bg === "image")) refreshBrowserTheme();
     let darkBg = bg;
     $effect(() => {
         const switching = bg !== darkBg;
@@ -127,9 +137,25 @@
     // after an update, a link to what changed; with the check on, a newer release too
     let notice: Notice | null = $state(updatedNotice());
     $effect(() => {
-        if (!ready || !settings.updateCheck || notice) return;
+        if (!ready || !settings.updateCheck || !fromZip() || notice) return;
         checkLatest().then((found) => found && (notice = found));
     });
+
+    // A device that can't keep up with the effects is moved to Speed once (perf.ts), unless
+    // the Effects slider was set by hand; a notice says so and can undo it. Frames are timed
+    // once per tab, on the page itself (not over the settings or a sky preview).
+    let framesTimed = false;
+    $effect(() => {
+        if (!ready || framesTimed || settingsOpen || skyPreview || bg === "none") return;
+        if (settings.effects === "performance" || settings.effectsChosen) return;
+        return watchFrames((struggling) => {
+            framesTimed = true;
+            if (!struggling || settings.effects === "performance" || settings.effectsChosen) return;
+            settings.effects = "performance";
+            settings.effectsAuto = true;
+        });
+    });
+    const speedNotice = $derived(settings.effectsAuto && settings.effects === "performance");
 
     // which wallpaper is on screen, for picking the transition into the next one
     let shownBg: string = bg;
@@ -159,7 +185,7 @@
     });
     $effect(() => {
         settings.align;
-        if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+        if (still()) return;
         for (const [el, was] of before) {
             const now = el.getBoundingClientRect();
             const dx = was.left - now.left;
@@ -188,7 +214,7 @@
 
     // the page UI rises in after the star entrance (see Stars.svelte)
     const starsEntrance =
-        bg === "stars" && settings.intro && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        bg === "stars" && settings.intro && settings.effects !== "performance" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let starsArrived = $state(!starsEntrance);
     if (starsEntrance) setTimeout(() => (starsArrived = true), 1000); // never stay hidden
 
@@ -212,9 +238,29 @@
 
     let themeToggled = false;
 
+    // colors from the wallpaper (the picture's url changes with every switch)
+    const pictureUrl = $derived(settings.pictureColors && bg === "image" ? wallpaper.url : null);
+
+    let themeRun = 0;
     async function syncTheme() {
-        if (!settings.browserTheme) return;
+        // a quicker later run (the next picture already) wins over a slow earlier one
+        const run = ++themeRun;
+        const seed = pictureUrl ? await pictureSeed(pictureUrl) : null;
+        if (run !== themeRun) return;
+        if (!settings.browserTheme) {
+            themeSource = null;
+            // no browser colors: the picture's palette is the whole theme; a picture with
+            // no color of its own (gray, black and white) leaves the default colors
+            if (seed) {
+                await setPictureAccent(null);
+                if (await applySeedTheme(seed)) themeVersion++;
+            } else if (clearBrowserTheme()) themeVersion++;
+            return;
+        }
         const result = await applyBrowserTheme(settings.themeColor);
+        if (run !== themeRun) return;
+        // with browser colors on, the picture lends just the accent
+        if (await setPictureAccent(seed)) themeVersion++;
         themeSource = result
             ? result.fromPolicy
                 ? "policy"
@@ -296,7 +342,8 @@
 
     $effect(() => {
         if (!ready) return;
-        const on = settings.browserTheme;
+        // the picture is read first so a switch of pictures re-runs this even with browser colors on
+        const on = !!pictureUrl || settings.browserTheme;
         const run = async () => {
             if (on) {
                 await syncTheme();
@@ -428,13 +475,19 @@
     $effect(() => {
         const text = query.trim();
         const engine = settings.engine;
-        suggested = [];
-        sugIndex = -1;
-        if (!settings.suggestions || !suggestEndpoint(engine) || !text || keyword || bangPrefix !== null) return;
+        if (!settings.suggestions || !suggestEndpoint(engine) || !text || keyword || bangPrefix !== null) {
+            suggested = [];
+            sugIndex = -1;
+            return;
+        }
+        // the previous list stays up while typing; it is swapped when the new one arrives
         const ctl = new AbortController();
         const timer = setTimeout(() => {
             suggestions(engine, text, ctl.signal).then(
-                (list) => (suggested = list.filter((s) => s !== text)),
+                (list) => {
+                    suggested = list.filter((s) => s !== text);
+                    sugIndex = -1;
+                },
                 () => {},
             );
         }, 150);
@@ -504,6 +557,7 @@
         settings.weather || bg === "weather" ? peekWeather(settings.city, settings.fahrenheit) : null,
     );
     const weather = $derived(settings.weather ? forecast : null);
+    let weatherIssue: WeatherProblem = $state(null);
     // last known list for the first frame, refreshed right after
     let top: Shortcut[] = $state(
         (() => {
@@ -538,7 +592,10 @@
         if (!ready) return;
         if (!settings.weather && bg !== "weather") return (forecast = null);
         const { city, fahrenheit } = settings;
-        const t = setTimeout(async () => (forecast = await getWeather(city, fahrenheit)), 500);
+        const t = setTimeout(async () => {
+            forecast = await getWeather(city, fahrenheit);
+            weatherIssue = weatherProblem();
+        }, 500);
         return () => clearTimeout(t);
     });
 
@@ -605,30 +662,42 @@
                 <GradientShimmer
                     bind:this={shimmer}
                     background
-                    intro={settings.intro && themeVersion === 0 && !bgSwitched}
+                    intro={settings.intro && settings.effects !== "performance" && themeVersion === 0 && !bgSwitched}
                     class="bg"
                 />
             {/key}
         {:else if bg === "stars"}
-            <Stars intro={starsEntrance && !bgSwitched} onintro={() => (starsArrived = true)} />
+            <Stars still={settings.effects === "performance"} intro={starsEntrance && !bgSwitched} onintro={() => (starsArrived = true)} />
         {:else if bg === "image"}
-            <ImageBg blur={settings.imageBlur} />
+            <ImageBg blur={settings.imageBlur} dim={settings.wallpaperDim} veil={settings.effects === "beauty" ? 0.5 : 1} picture={settings.pictureColors} />
         {:else if bg === "weather"}
             <WeatherBg
                 sky={skyPreview?.sky ?? (forecast ? skyFor(forecast.code) : "clear")}
                 hour={skyPreview?.hour ?? forecast?.hour}
                 brisk={!!skyPreview}
+                fps={settings.effects === "performance" ? 20 : 30}
             />
         {/if}
     </div>
 {/key}
 
-{#if notice && !settings.quiet}
+<!-- one at a time: an update first, then the switch to Speed -->
+{#if notice && !settings.quiet && !settingsOpen}
     <UpdateNotice
         {notice}
         ondismiss={() => {
             dismiss(notice!);
             notice = null;
+        }}
+    />
+{:else if speedNotice && !settings.quiet && !settingsOpen}
+    <UpdateNotice
+        notice={{ kind: "speed" }}
+        ondismiss={() => (settings.effectsAuto = false)}
+        onundo={() => {
+            settings.effects = "balanced";
+            settings.effectsChosen = true;
+            settings.effectsAuto = false;
         }}
     />
 {/if}
@@ -933,6 +1002,7 @@
         <Settings
             bind:settings
             {themeSource}
+            {weatherIssue}
             {emphasize}
             glass={bg !== "none"}
             onclose={() => (settingsOpen = false)}
@@ -940,6 +1010,8 @@
         />
     {/await}
 {/if}
+
+<UndoToast />
 
 {#if addingShortcuts}
     {#await loadAdd() then { default: AddShortcuts }}

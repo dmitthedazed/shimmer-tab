@@ -16,15 +16,17 @@
 <style>
     .row {
         display: flex;
+        flex-wrap: wrap;
         align-items: center;
-        gap: var(--gap-3);
+        gap: var(--gap-2) var(--gap-3);
         min-height: var(--row-height, 52px);
         padding: var(--row-padding, 10px 14px);
     }
 
     .text {
         display: flex;
-        flex: 1;
+        /* on a narrow panel a wide control drops below the name instead of overflowing */
+        flex: 1 1 96px;
         flex-direction: column;
         gap: 3px;
         min-width: 0;
@@ -32,5 +34,7 @@
 
     .control {
         flex-shrink: 0;
+        max-width: 100%;
+        margin-left: auto;
     }
 </style>

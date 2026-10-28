@@ -29,6 +29,15 @@ export function currentVersion(): string | null {
     }
 }
 
+/** a store install updates itself and its manifest carries the store's update_url; a zip does not */
+export function fromZip(): boolean {
+    try {
+        return !chrome.runtime.getManifest().update_url;
+    } catch {
+        return false;
+    }
+}
+
 const release = (version: string) => `https://github.com/${REPO}/releases/tag/v${version}`;
 
 /** the version this one replaced is remembered; a first install just records itself */

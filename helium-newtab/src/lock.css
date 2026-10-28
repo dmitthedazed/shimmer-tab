@@ -97,3 +97,24 @@ svg {
 .bg-layer canvas {
     transition: none !important;
 }
+
+/* Effects slider (Settings → Look): speed drops the glass blur and every transition, beauty
+   deepens the glass. data-fx is set from App.svelte. */
+:root[data-fx="performance"],
+:root[data-light][data-fx="performance"] {
+    --glass-filter: none;
+}
+
+:root[data-fx="performance"] *:not(.bg-fade),
+:root[data-fx="performance"] *::before,
+:root[data-fx="performance"] *::after {
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+}
+
+:root[data-fx="beauty"],
+:root[data-light][data-fx="beauty"] {
+    --glass-filter: blur(24px) saturate(150%);
+}

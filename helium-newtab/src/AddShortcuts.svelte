@@ -44,7 +44,7 @@
             bind:this={area}
             bind:value={text}
             aria-label={t("shortcuts")}
-            placeholder={'github.com\nReddit reddit.com\n\nor JSON: [{ "name": "…", "url": "…" }]'}
+            placeholder={"github.com\nNews bbc.com"}
             spellcheck="false"
             autocapitalize="off"
             rows="6"
@@ -52,9 +52,9 @@
     </label>
     <p class="hint" class:ready={found.length}>
         {#if found.length}
-            {count} {count === 1 ? "shortcut" : "shortcuts"} found
+            {t("found_shortcuts", { count })}
         {:else}
-            One link per line, optionally with a name, a JSON list or a Yet Another Speed Dial export
+            {t("add_shortcuts_hint")}
         {/if}
     </p>
     <input

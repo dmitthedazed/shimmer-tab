@@ -2,19 +2,19 @@
     import { openInternal } from "./open";
     import { t } from "./i18n";
     import { Button, Input, Text } from "@imput/helium-prism";
-    import { flip } from "svelte/animate";
     import { cubicOut } from "svelte/easing";
-    import { pop } from "./motion";
-    import { slide } from "svelte/transition";
+    import { flip, pop, slide } from "./motion";
 
     // names fold away under the icon instead of popping out
     function collapse(node: Element) {
         const s = slide(node, { duration: 220, easing: cubicOut });
-        const css = s.css!;
+        const css = s.css;
+        if (!css) return s; // Speed / reduced motion: no fold
         return { ...s, css: (t: number, u: number) => `${css(t, u)}; opacity: ${t};` };
     }
     import SiteIcon from "./SiteIcon.svelte";
     import { forgetIcon } from "./icons";
+    import { offerUndo } from "./undo.svelte";
     import { isFolder, normalizeUrl, type Shortcut } from "./storage.svelte";
     import Self from "./Shortcuts.svelte";
 
@@ -134,9 +134,16 @@
 
     function remove(i: number) {
         if (inside === i) inside = null;
-        items.splice(i, 1);
+        // kept so the toast can put it back where it was
+        const list = items;
+        const [gone] = list.splice(i, 1);
         close();
         onchange?.();
+        const name = gone.title || (isFolder(gone) ? t("folder") : host(gone.url));
+        offerUndo(t(isFolder(gone) ? "folder_removed" : "shortcut_removed", { name }), () => {
+            list.splice(Math.min(i, list.length), 0, gone);
+            onchange?.();
+        });
     }
 
     function drop(to: number) {
@@ -265,7 +272,7 @@
             <Input
                 bind:value={url}
                 bind:input={urlInput}
-                aria-label="URL"
+                aria-label={t("address")}
                 placeholder="example.com"
                 spellcheck="false"
                 autocapitalize="off"

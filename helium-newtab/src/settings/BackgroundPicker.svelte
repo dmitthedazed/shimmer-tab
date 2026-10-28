@@ -8,7 +8,7 @@
     import Section from "./Section.svelte";
     import WallpaperManager from "./WallpaperManager.svelte";
 
-    let { settings = $bindable(), emphasize }: { settings: Settings; emphasize: () => void } = $props();
+    let { settings = $bindable(), emphasize, advanced }: { settings: Settings; emphasize: () => void; advanced: boolean } = $props();
 
     const backgrounds: { value: Settings["background"]; label: string }[] = [
         { value: "shimmer", label: t("shimmer") },
@@ -87,7 +87,7 @@
                         {/if}
                     </span>
                     {#if settings.background === option.value}
-                        <span class="check" aria-hidden="true"><IconCheck /></span>
+                        <span class="check" aria-hidden="true" transition:pop={{ from: 0.5 }}><IconCheck /></span>
                     {/if}
                     {#if option.value === "random"}
                         <svg class="dice" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 5a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v14a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z" /><path d="M8.5 8.5m-.5 0a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" /><path d="M15.5 8.5m-.5 0a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" /><path d="M15.5 15.5m-.5 0a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" /><path d="M8.5 15.5m-.5 0a.5 .5 0 1 0 1 0a.5 .5 0 1 0 -1 0" fill="currentColor" /></svg>
@@ -106,10 +106,10 @@
         onchange={(e) => pickPicture(e.currentTarget.files)}
     />
     {#if settings.background === "image"}
-        <WallpaperManager bind:settings {emphasize} onadd={() => pictureInput?.click()} />
+        <WallpaperManager bind:settings {emphasize} {advanced} onadd={() => pictureInput?.click()} />
     {/if}
     {#if pictureNote}
-        <p class="s-note">{pictureNote}</p>
+        <p class="s-note" transition:pop={{ from: 0.96, duration: 150 }}>{pictureNote}</p>
     {/if}
     {#if settings.background === "weather" && !settings.city.trim()}
         <p class="s-note" transition:pop={{ from: 0.96, duration: 150 }}>
@@ -183,7 +183,19 @@
     }
 
     .bg-label {
+        max-width: 100%;
+        overflow: hidden;
         text-align: center;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    /* a phone-narrow panel (100vw - 32px, see Settings.svelte): two rows of three */
+    @media (max-width: 394px) {
+        .backgrounds {
+            grid-template-columns: repeat(3, 1fr);
+            row-gap: var(--gap-2);
+        }
     }
 
     .measure {

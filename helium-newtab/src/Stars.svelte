@@ -9,8 +9,8 @@
 
     // Starfield after ErrorZeros' Helium New Tab.
     // starSize compensates for previews that are scaled down.
-    type Props = { preview?: boolean; starSize?: number; intro?: boolean; onintro?: () => void };
-    let { preview = false, starSize = 1, intro = false, onintro }: Props = $props();
+    type Props = { preview?: boolean; starSize?: number; intro?: boolean; onintro?: () => void; still?: boolean };
+    let { preview = false, starSize = 1, intro = false, onintro, still = false }: Props = $props();
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const playing = intro && !preview && !introPlayed && !reduce;
@@ -18,7 +18,8 @@
 
     let warp: HTMLCanvasElement | undefined = $state();
 
-    onMount(() => (preview ? undefined : trackPointer()));
+    // still (the Speed effects mode): no cursor parallax, so nothing restyles the page per move
+    $effect(() => (preview || still ? undefined : trackPointer()));
 
     // Entrance: dropping out of hyperspace. Streaks fly out of the center and brake,
     // a flash marks the arrival, then the starfield settles in from the depth.
@@ -136,6 +137,11 @@
     .stars:not(.preview) {
         inset: -24px;
         translate: calc(var(--mx, 0) * -10px) calc(var(--my, 0) * -10px);
+    }
+
+    :global(:root[data-fx="performance"]) .stars:not(.preview),
+    :global(:root[data-fx="performance"]) .near {
+        translate: none;
     }
 
     .near {

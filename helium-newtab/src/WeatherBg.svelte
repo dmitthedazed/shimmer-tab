@@ -28,8 +28,10 @@
         hour?: number;
         /** weather changes arrive in well under a second (previews), not over a few */
         brisk?: boolean;
+        /** frame cap of the sky */
+        fps?: number;
     };
-    let { sky = "clear", hour, brisk = false }: Props = $props();
+    let { sky = "clear", hour, brisk = false, fps = 30 }: Props = $props();
 
     const nowHour = () => {
         const d = new Date();
@@ -118,15 +120,20 @@
     });
     let atmosphere: import("@takustaqu/atmosphere").Atmosphere | undefined = $state();
     let ready = $state(false);
+    // Atmosphere keeps this object and reads the cap every frame, so a new cap applies live
+    let options: import("@takustaqu/atmosphere").AtmosphereOptions | undefined = $state.raw();
+    $effect(() => {
+        if (options) options.fps = fps;
+    });
 
     onMount(() => {
         let gone = false;
         let instance: typeof atmosphere;
         import("@takustaqu/atmosphere").then(({ Atmosphere }) => {
             if (gone || !canvas) return;
-            instance = new Atmosphere(canvas, {
+            options = {
                 ...grade(cur.sky, cur.hour),
-                fps: 30,
+                fps,
                 animator: brisk ? { tau: 0.35 } : undefined,
                 // only acts when a frame overruns its budget: weak GPUs get a softer sky
                 // instead of a stuttering one
@@ -149,7 +156,8 @@
                 },
                 lightProbe: { ...PROBE, rate: 1 },
                 onLight: limit,
-            });
+            };
+            instance = new Atmosphere(canvas, options);
             atmosphere = instance;
         });
         return () => {

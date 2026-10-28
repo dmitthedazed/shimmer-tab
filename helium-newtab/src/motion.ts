@@ -2,13 +2,47 @@
 // its CopyIcon swaps icons by scaling them, buttons press to 0.97 in 0.2s.
 import { tick } from "svelte";
 import { cubicOut } from "svelte/easing";
+import { flip as svelteFlip } from "svelte/animate";
+import { fade as svelteFade, slide as svelteSlide } from "svelte/transition";
 
-/** Tooltip-style appear/disappear. */
+const reduced = typeof window !== "undefined" ? window.matchMedia("(prefers-reduced-motion: reduce)") : null;
+
+/** Speed mode (Settings → Look → Effects, data-fx set by App.svelte): no motion at all. */
+export const speed = () => typeof document !== "undefined" && document.documentElement.dataset.fx === "performance";
+/** no movement: Speed mode or the system's reduced motion */
+export const still = () => speed() || !!reduced?.matches;
+
+const NONE = { duration: 0 };
+
+/** Wraps a Svelte transition/animation so it is skipped when nothing should move. */
+function calm<A extends unknown[], R>(fn: (...args: A) => R) {
+    return (...args: A): R => (still() ? (NONE as R) : fn(...args));
+}
+
+export const flip = calm(svelteFlip);
+export const fade = calm(svelteFade);
+export const slide = calm(svelteSlide);
+
+/** Tooltip-style appear/disappear; with reduced motion just the fade, in Speed nothing. */
 export function pop(_node: Element, { duration = 150, from = 0.8 } = {}) {
+    if (speed()) return NONE;
+    const s = reduced?.matches ? 1 : from;
     return {
         duration,
         easing: cubicOut,
-        css: (t: number) => `opacity: ${t}; scale: ${from + (1 - from) * t};`,
+        css: (t: number) => `opacity: ${t}; scale: ${s + (1 - s) * t};`,
+    };
+}
+
+/** A settings row (or a group of them) opening up in its list: height and fade, Prism timing. */
+export function grow(node: Element, { duration = 200 } = {}) {
+    if (still()) return NONE;
+    const h = (node as HTMLElement).offsetHeight;
+    return {
+        duration,
+        easing: cubicOut,
+        // the list's 2px gap comes and goes with it
+        css: (t: number) => `overflow: hidden; height: ${t * h}px; opacity: ${t}; margin-top: ${(t - 1) * 2}px;`,
     };
 }
 
@@ -57,6 +91,7 @@ function fbm(w: number, h: number, seed: number) {
 }
 
 export function reveal(node: Element, { duration = 1100 } = {}) {
+    if (still()) return NONE;
     const el = node as HTMLElement;
     const { innerWidth: w, innerHeight: h } = window;
     const { x, y } = origin ?? { x: w / 2, y: h / 2 };
@@ -120,6 +155,7 @@ const FROZEN = [
 ];
 
 export function recede(node: Element, { duration = 1100 } = {}) {
+    if (still()) return NONE;
     // keep the old wallpaper's own colors while the page recolors around it: the shimmer
     // re-reads these variables as it draws, so pin them on the layer it lives in
     const el = node as HTMLElement;
@@ -142,8 +178,7 @@ export function recede(node: Element, { duration = 1100 } = {}) {
  * View Transitions API; falls back to an instant change.
  */
 export async function morphPage(update: () => unknown) {
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!document.startViewTransition || reduce) return update();
+    if (!document.startViewTransition || still()) return update();
     await document.startViewTransition(async () => {
         await update();
         await tick();
@@ -155,6 +190,7 @@ export async function morphPage(update: () => unknown) {
 const STRIPE_TARGET = 110;
 
 export function drop(node: Element, { duration = 1000 } = {}) {
+    if (still()) return NONE;
     const el = node as HTMLElement;
     const w = window.innerWidth;
     const count = Math.max(1, Math.round(w / STRIPE_TARGET));

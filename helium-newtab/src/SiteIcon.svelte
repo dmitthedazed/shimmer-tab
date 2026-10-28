@@ -1,8 +1,8 @@
 <script lang="ts">
     import { measure, siteIcon, type Fit, type SiteIcon } from "./icons";
     import { perms } from "./permissions.svelte";
-    import { knockout, tintMask } from "./tint";
-    import { fade } from "svelte/transition";
+    import { cachedMask, knockout, tintMask } from "./tint";
+    import { fade } from "./motion";
     import { isDark } from "./scheme.svelte";
     import { HeliumLogo } from "@imput/helium-prism";
     import ChromeLogo, { brand } from "./ChromeLogo.svelte";
@@ -83,11 +83,14 @@
     });
 
     let mask = $state("");
+    // the colored icon stays hidden while the mask is being made, unless it cannot be made
+    let maskFailed = $state(false);
     $effect(() => {
-        mask = "";
+        mask = tint && src ? cachedMask(src, opaque) : "";
+        maskFailed = false;
         if (!tint || !src) return;
         let alive = true;
-        tintMask(src, opaque).then((m) => alive && (mask = m), () => {});
+        tintMask(src, opaque).then((m) => alive && (mask = m), () => alive && (maskFailed = true));
         return () => (alive = false);
     });
 
@@ -127,7 +130,7 @@
     {:else if icon?.src}
         <!-- both stay mounted so switching single-color mode crossfades -->
         <img
-            class={[icon.fullBleed && !plain && "app", tint && mask && "hidden"]}
+            class={[icon.fullBleed && !plain && "app", tint && !maskFailed && "hidden"]}
             src={plain?.src ?? src}
             alt=""
             draggable="false"
@@ -180,6 +183,7 @@
     }
 
     img.hidden {
+        animation: none;
         opacity: 0;
     }
 

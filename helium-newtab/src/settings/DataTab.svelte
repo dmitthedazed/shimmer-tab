@@ -3,7 +3,9 @@
     import { t } from "../i18n";
     import { pop } from "../motion";
     import { WEB } from "../permissions.svelte";
+    import { fromZip } from "../updates";
     import { version } from "../../package.json";
+    import { offerUndo } from "../undo.svelte";
     import { exportSettings, importSettings, resetSettings } from "../backup.svelte";
     import type { Settings } from "../storage.svelte";
     import Row from "../Row.svelte";
@@ -16,9 +18,22 @@
     let note = $state("");
     let confirmReset = $state(false);
 
+    // a backup replaces everything: the old settings stay one Undo away
+    const keep = () => {
+        const before = $state.snapshot(settings);
+        return () => {
+            Object.assign(settings, before);
+            note = "";
+            emphasize();
+        };
+    };
+
     async function pickBackup(file: File | undefined) {
         if (!file) return;
-        note = await importSettings(file, settings);
+        const restore = keep();
+        const result = await importSettings(file, settings);
+        note = result.ok ? "" : result.text;
+        if (result.ok) offerUndo(result.text, restore);
         emphasize();
         if (importInput) importInput.value = "";
     }
@@ -30,7 +45,9 @@
             return;
         }
         confirmReset = false;
-        note = resetSettings(settings);
+        const restore = keep();
+        note = "";
+        offerUndo(resetSettings(settings), restore);
         emphasize();
     }
 </script>
@@ -45,8 +62,8 @@
                 }}>{t("save")}</Button
             >
         </Row>
-        <Row name={t("import")} desc={t("restore_from_a_saved")}>
-            <Button onclick={() => importInput?.click()}>{t("open")}</Button>
+        <Row name={t("import")} desc={t("import_desc")}>
+            <Button onclick={() => importInput?.click()}>{t("open_file")}</Button>
         </Row>
     </List>
     <input
@@ -58,7 +75,7 @@
     />
     {#if note}
         {#key note}
-            <p class="s-note" in:pop={{ from: 0.96, duration: 150 }}>{note}</p>
+            <p class="s-note" transition:pop={{ from: 0.96, duration: 150 }}>{note}</p>
         {/key}
     {/if}
 </Section>
@@ -75,14 +92,12 @@
 
 <Section title={t("about")}>
     <List>
-        {#if !WEB}
+        {#if !WEB && fromZip()}
             <Toggle bind:checked={settings.updateCheck} onchange={emphasize} name={t("check_for_updates")} desc={t("check_for_updates_desc")} />
         {/if}
-        <Row name="Shimmer Tab" desc={t("version", { version })}>
+        <!-- one row: name, version and author, the project page on the right -->
+        <Row name="Shimmer Tab" desc="{t('version', { version })} · {t('made_by')} Dmytrii Savin">
             <Link href="https://github.com/dmitthedazed/shimmer-tab">GitHub</Link>
-        </Row>
-        <Row name={t("made_by")} desc="Dmytrii Savin">
-            <Link href="https://github.com/dmitthedazed">@dmitthedazed</Link>
         </Row>
     </List>
 </Section>

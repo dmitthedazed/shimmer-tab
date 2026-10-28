@@ -4,7 +4,7 @@
 // far from the dominant lightness) become cut-outs. Opaque app icons get the reverse, iOS-style:
 // a faint plate with the glyph at full strength. The mask is then filled with the tint in CSS.
 
-const N = 128;
+const N = 192;
 const cache = new Map<string, Promise<string>>();
 
 function load(src: string): Promise<HTMLImageElement> {
@@ -131,13 +131,54 @@ async function build(src: string, opaque: boolean): Promise<string> {
     return canvas.toDataURL("image/png");
 }
 
+// Masks are kept in localStorage too, so a new tab paints icons already tinted instead of
+// showing the colored ones for a moment while the masks are rebuilt.
+const STORE = "tint-mask2:";
+const fingerprint = (key: string) => {
+    let h = 5381;
+    for (let i = 0; i < key.length; i++) h = ((h << 5) + h + key.charCodeAt(i)) | 0;
+    return `${STORE}${(h >>> 0).toString(36)}.${key.length}`;
+};
+const maskKey = (src: string, opaque: boolean) => `${opaque ? 1 : 0}${src}`;
+
+// localStorage is shared with the settings mirror, weather and icon caches: only the masks of
+// the last MAX_STORED icons are kept (oldest out first), and masks of earlier builds go
+const MAX_STORED = 48;
+const INDEX = "tint-mask-index";
+function remember(storeKey: string, mask: string) {
+    try {
+        let keys: string[] = JSON.parse(localStorage.getItem(INDEX) ?? "null") ?? [];
+        if (!Array.isArray(keys)) keys = [];
+        if (!localStorage.getItem(INDEX)) {
+            // first run with an index: drop whatever an older build left behind
+            for (const k of Object.keys(localStorage))
+                if (k.startsWith("tint-mask") && k !== INDEX) localStorage.removeItem(k);
+        }
+        keys = keys.filter((k) => k !== storeKey);
+        keys.push(storeKey);
+        while (keys.length > MAX_STORED) localStorage.removeItem(keys.shift()!);
+        localStorage.setItem(INDEX, JSON.stringify(keys));
+        localStorage.setItem(storeKey, mask);
+    } catch {} // full: it is rebuilt next time
+}
+
+/** the mask if a previous tab already built it: synchronous, for the first frame */
+export function cachedMask(src: string, opaque: boolean): string {
+    try {
+        return localStorage.getItem(fingerprint(maskKey(src, opaque))) ?? "";
+    } catch {
+        return "";
+    }
+}
+
 /** Alpha mask (data URL) for tinting an icon. */
 export function tintMask(src: string, opaque: boolean) {
-    const key = `${opaque ? 1 : 0}${src}`;
+    const key = maskKey(src, opaque);
     let mask = cache.get(key);
     if (!mask) {
         mask = build(src, opaque);
         cache.set(key, mask);
+        mask.then((m) => remember(fingerprint(key), m), () => {});
     }
     return mask;
 }

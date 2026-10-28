@@ -24,14 +24,14 @@ export async function importSettings(file: File, settings: Settings) {
         const added = Array.isArray(data) || Array.isArray(data?.shortcuts) || Array.isArray(data?.yasd?.bookmarks) ? parseShortcuts(JSON.stringify(data)) : [];
         if (added.length) {
             settings.links = [...settings.links, ...added];
-            return `Added ${countLinks(added)} shortcuts.`;
+            return { ok: true, text: t("shortcuts_added", { count: countLinks(added) }) };
         }
         const raw = data?.format === FORMAT || OLD_FORMATS.includes(data?.format) ? data.settings : data;
         if (!raw || typeof raw !== "object" || Array.isArray(raw)) throw new Error();
         Object.assign(settings, normalize(raw));
-        return `Imported ${countLinks(settings.links)} shortcuts and your settings.`;
+        return { ok: true, text: t("backup_loaded") };
     } catch {
-        return t("that_file_isn_t");
+        return { ok: false, text: t("that_file_isn_t") };
     }
 }
 

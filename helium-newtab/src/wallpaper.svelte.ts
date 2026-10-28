@@ -161,7 +161,7 @@ function writeIndex() {
     } catch {}
 }
 
-const PERIOD = { tab: 0, hour: 3600e3, day: 86400e3 };
+const PERIOD = { tab: 0, hour: 3600e3, day: 86400e3, never: Infinity };
 
 /** the picture to show now: the same one until it is due, then the next in order or a random other */
 function choose(index: Index): string | null {
@@ -366,7 +366,25 @@ export async function selectWallpaper(id: string) {
     show(entry);
 }
 
-export async function removeWallpaper(id: string) {
+/** removes a picture; the returned function puts it back (for Undo) */
+export async function removeWallpaper(id: string): Promise<() => Promise<void>> {
+    const entry = await get(id).catch(() => undefined);
+    const look = index.looks[id];
+    const at = index.ids.indexOf(id);
+    const wasOn = index.cur === id;
+    const restore = async () => {
+        if (!entry || index.ids.includes(id)) return;
+        await transact((s) => void s.put(entry, blobKey(id)));
+        index.ids.splice(Math.min(Math.max(0, at), index.ids.length), 0, id);
+        if (look) index.looks[id] = look;
+        if (wasOn || !index.cur) {
+            index.cur = id;
+            index.at = Date.now();
+            writeIndex();
+            show(entry);
+        } else writeIndex();
+        loadItems();
+    };
     await transact((s) => void s.delete(blobKey(id))).catch(() => {});
     const gone = index.cur === id;
     index.ids = index.ids.filter((x) => x !== id);
@@ -378,4 +396,5 @@ export async function removeWallpaper(id: string) {
     writeIndex();
     if (gone) show(index.cur ? ((await get(index.cur).catch(() => undefined)) ?? null) : null);
     loadItems();
+    return restore;
 }

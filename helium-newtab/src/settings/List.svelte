@@ -18,17 +18,29 @@
         gap: 2px;
     }
 
-    .list > :global(*) {
+    /* options that open up under another one sit in a .more group (motion.ts grow) and
+       still read as cards of this list */
+    .list :global(.more) {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .list > :global(:not(.more)),
+    .list :global(.more > :not(.more)) {
         border-radius: 5px;
         background-color: var(--helium-elevated-7);
     }
 
-    .list > :global(:first-child) {
+    .list > :global(:first-child:not(.more)),
+    .list > :global(.more:first-child > :first-child:not(.more)) {
         border-top-left-radius: 14px;
         border-top-right-radius: 14px;
     }
 
-    .list > :global(:last-child) {
+    .list > :global(:last-child:not(.more)),
+    .list > :global(.more:last-child > :last-child:not(.more)),
+    .list > :global(.more:last-child > .more:last-child > :last-child) {
         border-bottom-left-radius: 14px;
         border-bottom-right-radius: 14px;
     }
@@ -51,7 +63,7 @@
         font-size: 13px;
     }
 
-    .list > :global(.row) {
+    .list :global(.row) {
         --row-height: 54px;
         --row-padding: 10px 10px 10px 16px;
     }

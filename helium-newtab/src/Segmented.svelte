@@ -26,14 +26,35 @@
         // no slide-in on first paint (read without tracking to avoid a loop)
         if (next && !untrack(() => animate)) requestAnimationFrame(() => (animate = true));
     });
+
+    function pick(option: { value: T }) {
+        if (option.value === value) return;
+        value = option.value;
+        onchange?.(option.value);
+    }
+
+    // a radio group is one tab stop; the arrows move the choice, like native radios
+    function onkeydown(e: KeyboardEvent) {
+        const keys: Record<string, number> = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+        const n = options.length;
+        const at = Math.max(0, options.findIndex((o) => o.value === value));
+        const next =
+            e.key === "Home" ? 0 : e.key === "End" ? n - 1 : e.key in keys ? (at + keys[e.key] + n) % n : -1;
+        if (next < 0) return;
+        e.preventDefault();
+        pick(options[next]);
+        root?.querySelectorAll<HTMLButtonElement>("button")[next]?.focus();
+    }
 </script>
 
 <div
     class={["segmented", small && "small"]}
     role="radiogroup"
     aria-label={label}
+    tabindex="-1"
     bind:this={root}
     bind:clientWidth={width}
+    {onkeydown}
 >
     {#if indicator}
         <span
@@ -43,16 +64,14 @@
             aria-hidden="true"
         ></span>
     {/if}
-    {#each options as option (option.value)}
+    {#each options as option, i (option.value)}
         <button
             type="button"
             role="radio"
             aria-checked={value === option.value}
+            tabindex={value === option.value || (i === 0 && !options.some((o) => o.value === value)) ? 0 : -1}
             class={[value === option.value && "active"]}
-            onclick={() => {
-                value = option.value;
-                onchange?.(option.value);
-            }}
+            onclick={() => pick(option)}
         >
             {option.label}
         </button>

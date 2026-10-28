@@ -1,6 +1,7 @@
 <script lang="ts">
     import { Button, Toggle } from "@imput/helium-prism";
     import { t } from "../i18n";
+    import { grow } from "../motion";
     import { grant, perms, revoke, WEB } from "../permissions.svelte";
     import type { Settings } from "../storage.svelte";
     import Row from "../Row.svelte";
@@ -9,8 +10,8 @@
     import List from "./List.svelte";
     import PermToggle from "./PermToggle.svelte";
 
-    type Props = { settings: Settings; emphasize: () => void; onclose: () => void; onaddshortcuts: () => void };
-    let { settings = $bindable(), emphasize, onclose, onaddshortcuts }: Props = $props();
+    type Props = { settings: Settings; emphasize: () => void; onclose: () => void; onaddshortcuts: () => void; advanced: boolean };
+    let { settings = $bindable(), emphasize, onclose, onaddshortcuts, advanced }: Props = $props();
 
     // mirrors the optional permission, which can also change from the browser's side
     let sitesAccess = $state(perms.sites);
@@ -19,11 +20,29 @@
     });
 </script>
 
-<Section title={t("shortcuts")}>
-    <List>
-        <Toggle bind:checked={settings.shortcuts} onchange={emphasize} name={t("show_shortcuts")} desc={t("hover_to_edit_drag")} />
-        {#if settings.shortcuts}
+<List>
+    <Toggle bind:checked={settings.shortcuts} onchange={emphasize} name={t("show_shortcuts")} desc={t("hover_to_edit_drag")} />
+    {#if settings.shortcuts}
+        <div class="more" transition:grow>
             <Toggle bind:checked={settings.shortcutTitles} onchange={emphasize} name={t("names")} />
+            <Toggle bind:checked={settings.iconTint} onchange={emphasize} name={t("single_color")} desc={t("paint_all_icons_in")} />
+            {#if settings.iconTint}
+                <div class="more" transition:grow>
+                    <Row name={t("color")}>
+                        <Swatches bind:value={settings.tintColor} onchange={emphasize} />
+                    </Row>
+                </div>
+            {/if}
+            <Row name={t("add_shortcuts")} desc={t("paste_or_open_a")}>
+                <Button
+                    onclick={() => {
+                        onclose();
+                        onaddshortcuts();
+                    }}>{t("add")}</Button
+                >
+            </Row>
+            {#if advanced}
+                <div class="more" transition:grow>
             <Toggle bind:checked={settings.shortcutKeys} onchange={emphasize} name={t("number_keys")} desc={t("number_keys_desc")} />
             <Toggle
                 checked={settings.iconStyle === "contained"}
@@ -33,21 +52,7 @@
                 }}
                 name={t("icon_containers")}
             />
-            <Toggle bind:checked={settings.iconTint} onchange={emphasize} name={t("single_color")} desc={t("paint_all_icons_in")} />
-            {#if settings.iconTint}
-                <Row name={t("color")}>
-                    <Swatches bind:value={settings.tintColor} onchange={emphasize} />
-                </Row>
-            {/if}
             <Toggle bind:checked={settings.lockShortcuts} onchange={emphasize} name={t("lock")} desc={t("hide_add_and_edit")} />
-            <Row name={t("add_shortcuts")} desc={t("paste_or_open_a")}>
-                <Button
-                    onclick={() => {
-                        onclose();
-                        onaddshortcuts();
-                    }}>{t("add")}</Button
-                >
-            </Row>
             {#if !WEB}
                 <PermToggle
                     bind:checked={sitesAccess}
@@ -58,11 +63,13 @@
                     desc={t("read_sites_own_hq")}
                 />
             {/if}
-        {/if}
-    </List>
-</Section>
+                </div>
+            {/if}
+        </div>
+    {/if}
+</List>
 
-{#if !WEB}
+{#if !WEB && advanced}
     <Section title={t("history")}>
         <List>
             <PermToggle

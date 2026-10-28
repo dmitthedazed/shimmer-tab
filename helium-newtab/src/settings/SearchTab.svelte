@@ -1,15 +1,15 @@
 <script lang="ts">
     import { Dropdown, Input, Toggle } from "@imput/helium-prism";
     import { t } from "../i18n";
+    import { grow } from "../motion";
     import { ENGINES, suggestEndpoint } from "../engines";
     import { grantOrigin, WEB } from "../permissions.svelte";
     import type { Settings } from "../storage.svelte";
     import Row from "../Row.svelte";
-    import Section from "./Section.svelte";
     import List from "./List.svelte";
     import PermToggle from "./PermToggle.svelte";
 
-    let { settings = $bindable(), emphasize }: { settings: Settings; emphasize: () => void } = $props();
+    let { settings = $bindable(), emphasize, advanced }: { settings: Settings; emphasize: () => void; advanced: boolean } = $props();
 
     const engineOptions = [
         { value: "browser", label: t("browser_default") },
@@ -24,45 +24,48 @@
     };
 </script>
 
-<Section title={t("search")}>
-    <List>
-        <Toggle bind:checked={settings.searchShown} onchange={emphasize} name={t("show_search_bar")} desc={t("show_search_bar_desc")} />
-        <Row name={t("search_engine")} desc={t("search_engine_desc")}>
-            <Dropdown
-                width="150px"
-                aria-label={t("search_engine")}
-                value={settings.engine}
-                options={engineOptions}
-                onchange={(e) => {
-                    settings.engine = e.currentTarget.value;
-                    if (settings.suggestions) askSuggest().then((ok) => ok || (settings.suggestions = false));
-                    emphasize();
-                }}
-            />
-        </Row>
-        {#if settings.engine === "custom"}
-            <Row name={t("custom")}>
+<List>
+    <Toggle bind:checked={settings.searchShown} onchange={emphasize} name={t("show_search_bar")} desc={t("show_search_bar_desc")} />
+    <Row name={t("search_engine")}>
+        <Dropdown
+            width="170px"
+            aria-label={t("search_engine")}
+            value={settings.engine}
+            options={engineOptions}
+            onchange={(e) => {
+                settings.engine = e.currentTarget.value;
+                if (settings.suggestions) askSuggest().then((ok) => ok || (settings.suggestions = false));
+                emphasize();
+            }}
+        />
+    </Row>
+    {#if settings.engine === "custom"}
+        <div class="more" transition:grow>
+            <Row name={t("custom_engine")} desc={t("custom_engine_url")}>
                 <Input
                     small
-                    width="220px"
+                    width="200px"
                     bind:value={settings.customEngine}
-                    aria-label={t("custom_engine_url")}
+                    aria-label={t("custom_engine")}
                     placeholder="https://example.com/?q=%s"
                     spellcheck="false"
                 />
             </Row>
-        {/if}
-        {#if !WEB}
-            <PermToggle
-                bind:checked={settings.suggestions}
-                request={askSuggest}
-                onchange={emphasize}
-                name={t("suggestions")}
-                desc={suggestEndpoint(settings.engine) ? t("suggestions_desc") : t("suggestions_pick_engine")}
-            />
-        {/if}
-        <Toggle bind:checked={settings.bangs} onchange={emphasize} name={t("bangs")} desc={t("yt_cats_w_helium")} />
-        <Toggle bind:checked={settings.answers} onchange={emphasize} name={t("answers")} desc={t("answers_desc")} />
-    </List>
-    <p class="s-note">{t("everything_else_goes_to")}</p>
-</Section>
+        </div>
+    {/if}
+    {#if !WEB}
+        <PermToggle
+            bind:checked={settings.suggestions}
+            request={askSuggest}
+            onchange={emphasize}
+            name={t("suggestions")}
+            desc={suggestEndpoint(settings.engine) ? t("suggestions_desc") : t("suggestions_pick_engine")}
+        />
+    {/if}
+    {#if advanced}
+        <div class="more" transition:grow>
+            <Toggle bind:checked={settings.bangs} onchange={emphasize} name={t("bangs")} desc={t("yt_cats_w_helium")} />
+            <Toggle bind:checked={settings.answers} onchange={emphasize} name={t("answers")} desc={t("answers_desc")} />
+        </div>
+    {/if}
+</List>

@@ -11,7 +11,11 @@ export type Settings = {
     /** blur of the picture wallpaper, in px */
     imageBlur: number;
     /** with several pictures: how often the next one comes up */
-    wallpaperEvery: "tab" | "hour" | "day";
+    wallpaperEvery: "tab" | "hour" | "day" | "never";
+    /** veil over the picture that keeps text readable */
+    wallpaperDim: boolean;
+    /** page colors drawn from the picture on screen */
+    pictureColors: boolean;
     /** and which one comes next */
     wallpaperOrder: "random" | "order";
     clock: boolean;
@@ -45,6 +49,12 @@ export type Settings = {
     quiet: boolean;
     /** shortcuts and the top bar fade out after a few idle seconds */
     idleFade: boolean;
+    /** looks against speed: "performance" drops the glass blur, transitions and the intro */
+    effects: "performance" | "balanced" | "beauty";
+    /** the Effects slider was moved by hand: never switched to Speed on our own then */
+    effectsChosen: boolean;
+    /** Speed was switched on automatically (perf.ts) and the notice about it is still due */
+    effectsAuto: boolean;
     /** entrance animation of the wallpaper on page load */
     intro: boolean;
     shortcuts: boolean;
@@ -70,6 +80,11 @@ export const defaults: Settings = {
     background: "shimmer",
     imageBlur: 0,
     wallpaperEvery: "tab",
+    effects: "balanced",
+    effectsChosen: false,
+    effectsAuto: false,
+    wallpaperDim: true,
+    pictureColors: false,
     wallpaperOrder: "random",
     clock: true,
     hour12: false,
@@ -83,7 +98,14 @@ export const defaults: Settings = {
     engine: "browser",
     customEngine: "",
     suggestions: false,
-    updateCheck: false,
+    // on for a zip install, which nothing else updates (the store's manifest has an update_url)
+    updateCheck: (() => {
+        try {
+            return !chrome.runtime.getManifest().update_url;
+        } catch {
+            return false;
+        }
+    })(),
     answers: true,
     logo: "greeting",
     align: "center",
@@ -134,6 +156,9 @@ export function normalize(raw: Record<string, unknown> | null | undefined): Sett
     if (raw && !["greeting", "wordmark", "clock", "bigClock", "mark"].includes(raw.logo as string))
         settings.logo = Object.keys(raw).length ? (raw.logoText === false ? "mark" : "wordmark") : defaults.logo;
     delete (settings as { logoText?: boolean }).logoText;
+    // a backup from a newer or older version may carry values this one doesn't know
+    if (!["performance", "balanced", "beauty"].includes(settings.effects)) settings.effects = defaults.effects;
+    if (!["tab", "hour", "day", "never"].includes(settings.wallpaperEvery)) settings.wallpaperEvery = defaults.wallpaperEvery;
     // imported backups go through here too: only links that open as pages
     settings.links = Array.isArray(settings.links) ? cleanLinks(settings.links) : [...defaults.links];
     return settings;

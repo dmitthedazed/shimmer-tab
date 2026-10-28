@@ -23,6 +23,18 @@ const MAX_AGE = 15 * 60 * 1000;
 const ATTEMPT = "weather-try";
 const BACKOFF = 60 * 1000;
 
+/** why the last fetch for a city came back empty; shown under the city in the settings */
+export type WeatherProblem = "city" | "offline" | null;
+let problem: WeatherProblem = null;
+export const weatherProblem = () => problem;
+
+function failed(key: string, why: Exclude<WeatherProblem, null>) {
+    problem = why;
+    try {
+        localStorage.setItem(ATTEMPT, JSON.stringify({ key, at: Date.now(), problem: why }));
+    } catch {}
+}
+
 type Place = { lat: number; lon: number; name: string; country?: string };
 
 async function geocode(city: string): Promise<Place | null> {
@@ -56,21 +68,22 @@ export async function getWeather(city: string, fahrenheit: boolean): Promise<Wea
     const key = `${city.trim().toLowerCase()}|${fahrenheit}`;
     try {
         const cached = JSON.parse(localStorage.getItem(CACHE) ?? "null");
-        if (cached?.key === key && Date.now() - cached.at < MAX_AGE) return cached.weather;
+        if (cached?.key === key && Date.now() - cached.at < MAX_AGE) return (problem = null), cached.weather;
     } catch {}
 
+    problem = null;
     if (!city.trim()) return null;
     const stale = peekWeather(city, fahrenheit);
     try {
         // per city, so typing a new one is never held back
         const last = JSON.parse(localStorage.getItem(ATTEMPT) ?? "null");
-        if (last?.key === key && Date.now() - last.at < BACKOFF) return stale;
+        if (last?.key === key && Date.now() - last.at < BACKOFF) return (problem = last.problem ?? null), stale;
         localStorage.setItem(ATTEMPT, JSON.stringify({ key, at: Date.now() }));
     } catch {}
 
     try {
         const place = await geocode(city.trim());
-        if (!place) return null;
+        if (!place) return failed(key, "city"), null;
         const url = new URL("https://api.open-meteo.com/v1/forecast");
         url.searchParams.set("latitude", String(place.lat));
         url.searchParams.set("longitude", String(place.lon));
@@ -112,6 +125,7 @@ export async function getWeather(city: string, fahrenheit: boolean): Promise<Wea
         } catch {}
         return weather;
     } catch {
+        failed(key, "offline");
         return stale;
     }
 }
