@@ -68,7 +68,7 @@ export async function connect() {
         },
 
         /** Applies settings through the extension's own storage, then reloads. */
-        async setup(settings, { tab = "look", wait = 3000 } = {}) {
+        async setup(settings, { tab = "look", wait = 3000, advanced = false, pictures = 0 } = {}) {
             // storage is only reachable from the extension's own page
             if (!(await ev("location.protocol")).startsWith("chrome-extension")) {
                 await api.open();
@@ -78,11 +78,40 @@ export async function connect() {
                 await chrome.storage.sync.set({ settings: ${JSON.stringify(settings)} });
                 localStorage.setItem('settings-mirror', ${JSON.stringify(JSON.stringify(settings))});
                 localStorage.setItem('settings-tab', ${JSON.stringify(tab)});
+                localStorage.setItem('settings-advanced', ${advanced ? "'1'" : "'0'"});
                 localStorage.removeItem('svgl-rest'); // a hiccup must not cost a whole run its logos
             })()`);
+            if (pictures) await api.seedPictures(pictures);
             await api.open();
             await sleep(wait);
             await api.cursor();
+        },
+
+        /** Puts `n` generated wallpapers into the extension's own picture store. */
+        async seedPictures(n) {
+            await ev(`(async () => {
+                const palettes = [["#ff7a59", "#7b2ff7", "#1b1464"], ["#00c6a7", "#1e4d92", "#0b1c3a"], ["#f9d423", "#ff4e50", "#4b134f"], ["#a8e063", "#2c7744", "#0b3d2e"]];
+                const made = [];
+                for (let i = 0; i < ${n}; i++) {
+                    const cv = new OffscreenCanvas(1920, 1080);
+                    const c = cv.getContext('2d');
+                    const [a, b, d] = palettes[i % palettes.length];
+                    const g = c.createLinearGradient(0, 0, 1920, 1080);
+                    g.addColorStop(0, a); g.addColorStop(0.55, b); g.addColorStop(1, d);
+                    c.fillStyle = g; c.fillRect(0, 0, 1920, 1080);
+                    for (let k = 0; k < 5; k++) {
+                        const rg = c.createRadialGradient(400 + k * 330, 300 + ((k * 211) % 500), 0, 400 + k * 330, 300 + ((k * 211) % 500), 420);
+                        rg.addColorStop(0, 'rgb(255 255 255 / .22)'); rg.addColorStop(1, 'rgb(255 255 255 / 0)');
+                        c.fillStyle = rg; c.fillRect(0, 0, 1920, 1080);
+                    }
+                    made.push(await cv.convertToBlob({ type: 'image/jpeg', quality: 0.9 }));
+                }
+                const db = await new Promise((res, rej) => { const q = indexedDB.open('shimmer-tab', 1); q.onupgradeneeded = () => q.result.createObjectStore('kv'); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); });
+                const ids = made.map((_, i) => 'demo' + i);
+                await new Promise((res) => { const tx = db.transaction('kv', 'readwrite'); const s = tx.objectStore('kv'); made.forEach((blob, i) => s.put({ still: blob }, 'wp:' + ids[i])); tx.oncomplete = res; });
+                const look = { light: false, scrim: [0.25, 0.3, 0.35, 0.4], halo: [0, 0, 0, 0] };
+                localStorage.setItem('wallpaper-set', JSON.stringify({ ids, looks: Object.fromEntries(ids.map((id) => [id, look])), cur: ids[0], at: Date.now() }));
+            })()`);
         },
 
         /** Draws a cursor into the page so it shows up in the capture. */
@@ -137,7 +166,7 @@ export async function connect() {
         },
 
         async center(js) {
-            const r = await ev(`(() => { const el = ${js}; if (!el) return null; const b = el.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`);
+            const r = await ev(`(() => { const el = ${js}; if (!el) return null; el.scrollIntoView({ block: "nearest" }); const b = el.getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; })()`);
             if (!r) throw new Error("not found: " + js);
             return r;
         },
@@ -188,6 +217,12 @@ export const baseSettings = {
     align: "center",
     quiet: false,
     intro: true,
+    effects: "balanced",
+    effectsChosen: true,
+    wallpaperDim: true,
+    pictureColors: false,
+    wallpaperEvery: "tab",
+    updateCheck: false,
     shortcuts: true,
     lockShortcuts: false,
     shortcutTitles: true,

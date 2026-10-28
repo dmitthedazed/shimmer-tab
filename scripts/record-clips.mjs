@@ -7,7 +7,9 @@ const only = process.argv.slice(3);
 const r = await connect();
 const { sleep } = r;
 const sw = (name) => r.byText("[role=switch]", name);
-const tab = (name) => r.byText("header .segmented button", name);
+const tab = (name) => r.byText("aside footer .segmented button", name);
+const mode = (name) => r.byText("aside header .segmented button", name);
+const stop = (name) => r.byText(".slider .labels button", name);
 const bgTile = (name) => r.byText(".bg-option", name);
 const seg = (name) => r.byText(".segmented button", name);
 const gear = `document.querySelector('[aria-label="Settings"]')`;
@@ -76,32 +78,32 @@ const clips = {
         await sleep(1300);
     },
 
-    // icons: containers, recolor through the palette, names off and on
+    // icons: tiles, recolor through the palette, names off and on
     async icons(dir) {
-        await r.setup({ ...base, background: "stars" }, { tab: "shortcuts" });
+        await r.setup({ ...base, background: "stars" }, { tab: "shortcuts", advanced: true });
         await r.clickEl(gear, 200);
         await sleep(500);
         r.start(dir);
         await sleep(150);
-        await r.clickEl(sw("Icon containers"), 380);
+        await r.clickEl(sw("Icons on tiles"), 380);
         await sleep(700);
-        await r.clickEl(sw("Single color"), 350);
+        await r.clickEl(sw("One color for icons"), 350);
         await sleep(650);
         for (const color of ["Red", "Amber", "Green", "Purple", "Text", "Accent"]) {
             await r.clickEl(`document.querySelector('.swatch[aria-label="${color}"]')`, 220);
             await sleep(380);
         }
-        await r.clickEl(sw("Single color"), 350);
+        await r.clickEl(sw("One color for icons"), 350);
         await sleep(550);
-        await r.clickEl(sw("Names"), 350);
+        await r.clickEl(sw("Names under icons"), 350);
         await sleep(650);
-        await r.clickEl(sw("Names"), 300);
+        await r.clickEl(sw("Names under icons"), 300);
         await sleep(550);
-        await r.clickEl(sw("Icon containers"), 350);
+        await r.clickEl(sw("Icons on tiles"), 350);
         await sleep(700);
     },
 
-    // settings: morph through every tab, flip a few things
+    // settings: simple first, morph through the tabs, then Advanced opens the rest
     async settings(dir) {
         await r.setup({ ...base, background: "shimmer" });
         r.start(dir);
@@ -112,6 +114,8 @@ const clips = {
             await r.clickEl(tab(t), 330);
             await sleep(430);
         }
+        await r.clickEl(mode("Advanced"), 330);
+        await sleep(650);
         await r.clickEl(sw("Seconds"), 350);
         await sleep(550);
         await r.clickEl(r.byText(".segmented.small button, .segmented button", "12h"), 330);
@@ -124,13 +128,50 @@ const clips = {
         await sleep(600);
         await r.clickEl(seg("Greeting"), 300);
         await sleep(600);
+        await r.clickEl(mode("Simple"), 330);
+        await sleep(700);
         await r.click(220, 560, 450);
         await sleep(600);
     },
 
+    // effects: Speed drops the glass and the motion, Beauty deepens it
+    async effects(dir) {
+        await r.setup({ ...base, background: "stars" });
+        await r.clickEl(gear, 200);
+        await sleep(600);
+        r.start(dir);
+        await sleep(300);
+        await r.clickEl(stop("Speed"), 450);
+        await sleep(1300);
+        await r.clickEl(stop("Beauty"), 450);
+        await sleep(1500);
+        await r.clickEl(stop("Balanced"), 450);
+        await sleep(1300);
+    },
+
+    // your own pictures fade into each other and the page takes the picture's colors
+    async pictures(dir) {
+        await r.setup({ ...base, background: "image" }, { pictures: 3, advanced: true });
+        await r.clickEl(gear, 200);
+        await sleep(700);
+        r.start(dir);
+        await sleep(300);
+        const thumb = (i) => `document.querySelectorAll('.thumb .pick')[${i}]`;
+        await r.clickEl(thumb(1), 400);
+        await sleep(1400);
+        await r.clickEl(thumb(2), 350);
+        await sleep(1400);
+        await r.clickEl(sw("Colors from picture"), 400);
+        await sleep(1100);
+        await r.clickEl(thumb(0), 350);
+        await sleep(1500);
+        await r.clickEl(thumb(1), 350);
+        await sleep(1500);
+    },
+
     // the page slides to either side, then the logo cycles greeting → wordmark → mark
     async layout(dir) {
-        await r.setup({ ...base, background: "shimmer" });
+        await r.setup({ ...base, background: "shimmer" }, { advanced: true });
         r.start(dir);
         await sleep(150);
         for (const side of ["Left", "Right", "Center"]) {

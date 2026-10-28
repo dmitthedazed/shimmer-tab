@@ -28,7 +28,7 @@
     <Toggle bind:checked={settings.searchShown} onchange={emphasize} name={t("show_search_bar")} desc={t("show_search_bar_desc")} />
     <Row name={t("search_engine")}>
         <Dropdown
-            width="170px"
+            width="196px"
             aria-label={t("search_engine")}
             value={settings.engine}
             options={engineOptions}

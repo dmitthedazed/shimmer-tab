@@ -42,16 +42,20 @@ No account, no analytics, no server of its own. See the [privacy policy](PRIVACY
   </tr>
   <tr>
     <td><b>Bangs with autocomplete</b><br><img src="previews/gifs/bangs.gif" alt="Typing !y, picking YouTube, then !g for GitHub"></td>
-    <td><b>Containers, one color, names</b><br><img src="previews/gifs/icons.gif" alt="Icon containers and single-color tinting"></td>
+    <td><b>Tiles, one color, names</b><br><img src="previews/gifs/icons.gif" alt="Icons on tiles, one color for all icons and names on or off"></td>
   </tr>
   <tr>
     <td><b>Left, center or right</b><br><img src="previews/gifs/layout.gif" alt="Moving the page to the left and right, then switching the logo text"></td>
     <td><b>Focus mode</b><br><img src="previews/gifs/focus.gif" alt="Weather details, then focus mode leaves only the search"></td>
   </tr>
+  <tr>
+    <td><b>Your pictures, your colors</b><br><img src="previews/gifs/pictures.gif" alt="Switching between three pictures, then the page takes its colors from the picture"></td>
+    <td><b>Speed, Balanced or Beauty</b><br><img src="previews/gifs/effects.gif" alt="The Effects slider going from Speed to Beauty and back"></td>
+  </tr>
 </table>
 
 <p align="center">
-  <img src="previews/settings.png" alt="Settings in light and dark">
+  <img src="previews/settings.png" alt="Settings in light and dark, simple by default">
 </p>
 
 ## Install
@@ -82,6 +86,8 @@ Other scripts:
 | `pnpm bangs:refresh` | Update the bundled bang catalog |
 | `pnpm pages` | Build the web version into `gh-pages` (`--push` to publish) |
 | `scripts/record-clips.sh` | Record the preview clips with a headless Helium (needs ffmpeg and a GPU) |
+| `scripts/clips-to-gifs.sh` | Turn the clips into the README GIFs |
+| `scripts/settings-shots.sh` | Retake the settings picture |
 
 Publishing a GitHub release attaches the extension zip and refreshes the web version.
 
