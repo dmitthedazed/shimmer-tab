@@ -21,7 +21,7 @@
     const INSET = 0.6;
 
 
-    let icon: SiteIcon | null = $state(null);
+    let icon = $state<SiteIcon | null>(null) as SiteIcon | null;
 
     const dark = $derived(isDark());
 

@@ -20,7 +20,7 @@ or **[try it in the browser](https://dmitthedazed.github.io/shimmer-tab/)**
 
 ## Features
 
-- **Wallpapers.** Prism's animated shimmer, a starfield with cursor parallax, a live sky that follows your city's weather and time of day, or your own picture or GIF. Switching flows from one into the other.
+- **Wallpapers.** Prism's animated shimmer, a starfield with cursor parallax, a live sky that follows your city's weather and time of day, or your own pictures and GIFs: change them each tab, hourly, daily or never, with a soft fade between them. Blur and dim the picture, or let the page take its colors from it.
 - **Search with bangs.** `!yt lofi`, `cats !w`, with autocomplete from Helium's own catalog. Start typing anywhere on the page.
 - **Shortcuts with sharp icons.** Vector logos for about 600 services, the site's own app icon for the rest, all optically the same size. Containers, one-colour tint, names on or off, drag to reorder.
 - **Widgets.** Most visited, recently closed, date and time, weather, and quick answers for math and unit conversions in the search bar.
@@ -28,6 +28,9 @@ or **[try it in the browser](https://dmitthedazed.github.io/shimmer-tab/)**
 - **Focus mode** with just the logo and search.
 - **Layout** centered or along either edge.
 - **Browser colors** from Helium's theme, expanded into a full Material palette.
+- **Effects slider.** Speed, Balanced or Beauty. If a slow device struggles, Shimmer Tab switches to Speed on its own and tells you.
+- **Simple and Advanced settings.** The basics up front, the rest one tap away.
+- **Undo** for removed pictures, shortcuts and folders, and for a reset.
 - Light and dark settings in Prism style, with export and import.
 
 No account, no analytics, no server of its own. See the [privacy policy](PRIVACY.md).

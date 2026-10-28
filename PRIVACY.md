@@ -1,6 +1,6 @@
 # Privacy policy
 
-_Shimmer Tab for Helium, last updated October 26, 2026_
+_Shimmer Tab for Helium, last updated October 29, 2026_
 
 Shimmer Tab replaces your browser's new tab page. It has no account, no analytics, no ads
 and no server of its own. Nothing you do on the page is sent to the developer.
@@ -25,7 +25,7 @@ The page talks to third parties only to show what you asked for:
 | Weather is turned on, or the weather wallpaper is picked | [Open-Meteo](https://open-meteo.com) (geocoding and forecast APIs) | The city name you typed and its coordinates; no device location is used |
 | A shortcut's logo is shown | [svgl.app](https://svgl.app) | Which logo file to download (for example `github_dark.svg`) |
 | "Icons for every site" is turned on | The websites in your shortcuts and most visited list | A normal request for the site's page, web app manifest and icon files, without cookies |
-| "Check for updates" is turned on (off by default) | [GitHub](https://github.com) (releases API) | A plain request for the latest release of this extension, at most once a day; no cookies or identifiers |
+| "Check for updates" is turned on (on by default only when installed from the zip, off for store installs) | [GitHub](https://github.com) (releases API) | A plain request for the latest release of this extension, at most once a day; no cookies or identifiers |
 | You search | The search engine you chose in settings (your browser's default unless you pick another), or the site of a bang you used | Your search text, the same as searching from the address bar |
 | "Suggestions" is turned on (off by default) | The suggestion service of the engine you chose | What you type in the search bar, after a short pause, without cookies |
 

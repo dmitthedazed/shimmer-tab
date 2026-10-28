@@ -385,6 +385,10 @@
     // the logo can be the clock; then the bar on top doesn't repeat what it shows
     const logoClock = $derived(settings.logoShown && (settings.logo === "clock" || settings.logo === "bigClock"));
     const barClock = $derived(settings.clock && !logoClock);
+    let forecast: Weather | null = $state(
+        settings.weather || bg === "weather" ? peekWeather(settings.city, settings.fahrenheit) : null,
+    );
+    const weather = $derived(settings.weather ? forecast : null);
     // a clock logo takes the date and weather along, so the bar goes away
     const barWeather = $derived(logoClock ? null : weather);
 
@@ -553,10 +557,6 @@
     });
 
     // fetched when the widget is on or the weather wallpaper needs it; shown only with the widget
-    let forecast: Weather | null = $state(
-        settings.weather || bg === "weather" ? peekWeather(settings.city, settings.fahrenheit) : null,
-    );
-    const weather = $derived(settings.weather ? forecast : null);
     let weatherIssue: WeatherProblem = $state(null);
     // last known list for the first frame, refreshed right after
     let top: Shortcut[] = $state(
@@ -590,7 +590,10 @@
     // debounced so typing a city doesn't fire a request per key
     $effect(() => {
         if (!ready) return;
-        if (!settings.weather && bg !== "weather") return (forecast = null);
+        if (!settings.weather && bg !== "weather") {
+            forecast = null;
+            return;
+        }
         const { city, fahrenheit } = settings;
         const t = setTimeout(async () => {
             forecast = await getWeather(city, fahrenheit);
@@ -720,11 +723,13 @@
             <span class="dot" aria-hidden="true" transition:pop>·</span>
         {/if}
         {#if barWeather}
-            {@const info = describe(weather.code)}
-            {@const w = weather}
+            {@const w = barWeather}
+            {@const info = describe(w.code)}
             <span class="group" transition:pop>
             <Tooltip>
                 {#snippet anchor()}
+                    <!-- focusable so the tooltip opens from the keyboard -->
+                    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                     <span class="weather" tabindex="0" aria-label="{w.temp}°, {info.label}">
                         {#key `${w.code}${w.day}`}
                             <span class="wi" in:pop={{ duration: 200 }}>
@@ -961,7 +966,7 @@
     </div>
 </main>
 
-<div class={["corner", settingsOpen && "open", idle && "idle"]} onpointerenter={loadSettings} onfocusin={loadSettings}>
+<div role="group" class={["corner", settingsOpen && "open", idle && "idle"]} onpointerenter={loadSettings} onfocusin={loadSettings}>
     <Button
         circle
         transparent
