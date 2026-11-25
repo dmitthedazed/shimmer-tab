@@ -402,15 +402,18 @@ export function siteIcon(url: string): Promise<SiteIcon> {
 
         const key = PREFIX + site;
         const cached = await readCache(key);
-        if (cached && Date.now() - cached.at < MAX_AGE) return cached;
-        // without access to sites: the browser's own favicon, not cached, so the real
-        // icon replaces it once access is granted
+        // nothing big enough on the site (only a 16–32px favicon, or a bot check in front
+        // of it): the browser's own favicon beats a letter. Not cached, so a real icon
+        // takes over once the site has one.
+        const orBrowser = (icon: SiteIcon) => (icon.src ? icon : browserFavicon(site));
+        if (cached && Date.now() - cached.at < MAX_AGE) return orBrowser(cached);
+        // without access to sites: the browser's own favicon too, until access is granted
         if (!(await canReadSites())) return cached?.src ? cached : browserFavicon(site);
         const icon = await resolve(site);
         // keep a stale icon over a failed refresh
         if (!icon.src && cached?.src) return cached;
         await writeCache(key, icon);
-        return icon;
+        return orBrowser(icon);
     })();
     memory.set(memoKey, pending);
     return pending;

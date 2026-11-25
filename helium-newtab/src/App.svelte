@@ -248,6 +248,32 @@
         arriveTimer = setTimeout(arrive, ms(bg === "stars" ? 1000 : bg === "shimmer" ? 700 : 200));
     }
 
+    // WebGL can lose its context (a GPU reset or driver update, too many contexts open): the
+    // shimmer then draws nothing and only the page color is left, white in light mode. Its
+    // gradient stands in meanwhile, and it starts over once the browser hands the context
+    // back. The weather sky (atmosphere) recovers on its own.
+    let glLost = $state(false);
+    let glRun = $state(0);
+    function watchGl(node: HTMLElement) {
+        const lost = (e: Event) => {
+            if (bg !== "shimmer") return;
+            e.preventDefault(); // without this the browser never restores it
+            glLost = true;
+        };
+        const restored = () => {
+            if (!glLost) return;
+            glLost = false;
+            glRun++;
+        };
+        // context events don't bubble: catch them on the way down
+        node.addEventListener("webglcontextlost", lost, true);
+        node.addEventListener("webglcontextrestored", restored, true);
+        return () => {
+            node.removeEventListener("webglcontextlost", lost, true);
+            node.removeEventListener("webglcontextrestored", restored, true);
+        };
+    }
+
     // the shimmer's intro reveal is for page load only, not for switching to it
     // (derived, so the new wallpaper already reads it as it mounts: an effect would set it a
     // frame too late and the shimmer would play its intro under the transition, a blink)
@@ -685,17 +711,18 @@
 
 {#key bg}
     <div
-        class="bg-layer"
+        class={["bg-layer", glLost && bg === "shimmer" && "gl-lost"]}
+        {@attach watchGl}
         in:enter
         out:recede
         onintroend={() => bgSwitched && shimmer?.emphasize()}
     >
         {#if bg === "shimmer"}
-            {#key `${themeVersion}:${introRun}`}
+            {#key `${themeVersion}:${introRun}:${glRun}`}
                 <GradientShimmer
                     bind:this={shimmer}
                     background
-                    intro={replaying || (settings.intro && settings.effects !== "performance" && themeVersion === 0 && !bgSwitched)}
+                    intro={replaying || (settings.intro && settings.effects !== "performance" && themeVersion === 0 && glRun === 0 && !bgSwitched)}
                     class="bg"
                 />
             {/key}
@@ -1081,6 +1108,15 @@
         /* opaque, so a revealing layer fully covers the one underneath */
         background: var(--background);
         pointer-events: none;
+    }
+
+    /* the shimmer's WebGL context is gone for now (watchGl): its colors without the stripes */
+    .bg-layer.gl-lost {
+        background: linear-gradient(180deg, var(--bg-gradient-start), var(--bg-gradient-end));
+    }
+
+    .bg-layer.gl-lost > :global(canvas) {
+        visibility: hidden;
     }
 
     .row {
