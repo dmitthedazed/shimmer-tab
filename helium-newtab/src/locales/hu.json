@@ -112,6 +112,8 @@
     "fx_performance_desc": "No see-through glass or animations. Best for older computers",
     "fx_balanced_desc": "See-through glass and smooth animations",
     "fx_beauty_desc": "Richer glass and brighter pictures",
+    "animation_speed": "Animation speed",
+    "play_intro": "Play intro",
     "dim_picture": "Dim picture",
     "dim_picture_desc": "Tones the picture down so text stays easy to read",
     "picture_colors": "Colors from picture",
