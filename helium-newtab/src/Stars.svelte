@@ -6,14 +6,16 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { trackPointer } from "./pointer";
+    import { ms } from "./motion";
 
     // Starfield after ErrorZeros' Helium New Tab.
     // starSize compensates for previews that are scaled down.
-    type Props = { preview?: boolean; starSize?: number; intro?: boolean; onintro?: () => void; still?: boolean };
-    let { preview = false, starSize = 1, intro = false, onintro, still = false }: Props = $props();
+    // replay: the entrance again on demand (Settings → Effects → Play intro)
+    type Props = { preview?: boolean; starSize?: number; intro?: boolean; replay?: boolean; onintro?: () => void; still?: boolean };
+    let { preview = false, starSize = 1, intro = false, replay = false, onintro, still = false }: Props = $props();
 
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const playing = intro && !preview && !introPlayed && !reduce;
+    const playing = (replay || (intro && !introPlayed)) && !preview && !reduce;
     if (playing) introPlayed = true;
 
     let warp: HTMLCanvasElement | undefined = $state();
@@ -23,7 +25,7 @@
 
     // Entrance: dropping out of hyperspace. Streaks fly out of the center and brake,
     // a flash marks the arrival, then the starfield settles in from the depth.
-    const WARP = 550;
+    const WARP = ms(550);
     onMount(() => {
         if (!playing || !warp) return;
         const canvas = warp;
@@ -121,7 +123,7 @@
             radial-gradient(calc(1.5px * var(--k)) calc(1.5px * var(--k)) at 280px 60px, var(--star), transparent),
             radial-gradient(calc(1px * var(--k)) calc(1px * var(--k)) at 310px 180px, var(--star), transparent);
         background-size: 350px 350px;
-        animation: drift 20s linear infinite;
+        animation: drift calc(20s * var(--motion, 1)) linear infinite;
     }
 
     /* settings tile: a still frame */
@@ -165,7 +167,7 @@
             radial-gradient(3px 3px at 230px 470px, var(--star), transparent),
             radial-gradient(2px 2px at 520px 40px, var(--star), transparent);
         background-size: 600px 560px;
-        animation: drift-near 34s linear infinite;
+        animation: drift-near calc(34s * var(--motion, 1)) linear infinite;
     }
 
     @keyframes drift-near {
@@ -175,7 +177,7 @@
     }
 
     .arrive-near {
-        animation: arrive 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+        animation: arrive calc(0.7s * var(--motion, 1)) cubic-bezier(0.16, 1, 0.3, 1) calc(0.3s * var(--motion, 1)) both;
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -186,7 +188,7 @@
 
     /* the field settles in from the depth once the warp brakes */
     .arrive {
-        animation: arrive 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.3s both;
+        animation: arrive calc(0.7s * var(--motion, 1)) cubic-bezier(0.16, 1, 0.3, 1) calc(0.3s * var(--motion, 1)) both;
     }
 
     @keyframes arrive {
@@ -204,7 +206,7 @@
         width: 100vw;
         height: 100vh;
         pointer-events: none;
-        animation: warp-out 0.3s ease 0.4s both;
+        animation: warp-out calc(0.3s * var(--motion, 1)) ease calc(0.4s * var(--motion, 1)) both;
     }
 
     @keyframes warp-out {
@@ -232,7 +234,7 @@
         pointer-events: none;
         translate: -50% -50%;
         opacity: 0;
-        animation: flash 0.55s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s both;
+        animation: flash calc(0.55s * var(--motion, 1)) cubic-bezier(0.2, 0.8, 0.2, 1) calc(0.3s * var(--motion, 1)) both;
     }
 
     @keyframes flash {

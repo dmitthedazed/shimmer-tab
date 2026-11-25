@@ -191,7 +191,7 @@
         position: absolute;
         top: 0;
         left: 0;
-        transition: opacity 1.5s ease;
+        transition: opacity calc(1.5s * var(--motion, 1)) ease;
         mix-blend-mode: screen;
     }
 </style>

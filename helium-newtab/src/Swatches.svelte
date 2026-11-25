@@ -83,7 +83,7 @@
         background: var(--swatch) !important;
         box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.08);
         cursor: pointer;
-        transition: transform 0.2s, box-shadow 0.2s;
+        transition: transform calc(0.2s * var(--motion, 1)), box-shadow calc(0.2s * var(--motion, 1));
     }
 
     .swatch:active {

@@ -154,8 +154,8 @@
     .site-icon {
         position: relative;
         transition:
-            background-color 0.25s,
-            box-shadow 0.25s;
+            background-color calc(0.25s * var(--motion, 1)),
+            box-shadow calc(0.25s * var(--motion, 1));
         display: grid;
         place-items: center;
         flex-shrink: 0;
@@ -170,11 +170,11 @@
         width: var(--size);
         height: var(--size);
         object-fit: contain;
-        animation: appear 0.25s ease;
+        animation: appear calc(0.25s * var(--motion, 1)) ease;
         transition:
-            transform 0.25s ease,
-            opacity 0.25s ease,
-            border-radius 0.25s ease;
+            transform calc(0.25s * var(--motion, 1)) ease,
+            opacity calc(0.25s * var(--motion, 1)) ease,
+            border-radius calc(0.25s * var(--motion, 1)) ease;
     }
 
     img,
@@ -223,14 +223,14 @@
 
     .tinted {
         transition:
-            transform 0.25s ease,
-            background-color 0.25s ease;
+            transform calc(0.25s * var(--motion, 1)) ease,
+            background-color calc(0.25s * var(--motion, 1)) ease;
         display: block;
         width: var(--size);
         height: var(--size);
         mask-size: 100% 100%;
         mask-repeat: no-repeat;
-        animation: appear 0.25s ease;
+        animation: appear calc(0.25s * var(--motion, 1)) ease;
     }
 
     .letter {
@@ -243,7 +243,7 @@
         flex-direction: column;
         justify-content: center;
         gap: calc(var(--size) * 0.02);
-        animation: appear 0.25s ease;
+        animation: appear calc(0.25s * var(--motion, 1)) ease;
     }
 
     .local svg {

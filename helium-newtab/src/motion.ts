@@ -14,21 +14,44 @@ export const still = () => speed() || !!reduced?.matches;
 
 const NONE = { duration: 0 };
 
-/** Wraps a Svelte transition/animation so it is skipped when nothing should move. */
-function calm<A extends unknown[], R>(fn: (...args: A) => R) {
-    return (...args: A): R => (still() ? (NONE as R) : fn(...args));
+// Animation speed (Settings → Look → Effects): every duration and delay is multiplied by
+// `k`, 1 / speed, and the wallpapers' own motion runs 1 / k as fast. CSS reads it as
+// --motion (the star drift too); the shimmer and the weather sky (patched Prism and
+// atmosphere, see patches/) as globalThis.__shimmerMotion. Both are set here so a new tab
+// mounts at the right speed.
+export const SPEEDS = [0.5, 0.75, 1, 1.5, 2] as const;
+let k = 1;
+export function setMotionSpeed(speed: number) {
+    k = 1 / (SPEEDS.includes(speed as (typeof SPEEDS)[number]) ? speed : 1);
+    if (typeof document !== "undefined") document.documentElement.style.setProperty("--motion", String(k));
+    (globalThis as { __shimmerMotion?: number }).__shimmerMotion = k;
+}
+/** a duration (or delay) in ms at the chosen animation speed */
+export const ms = (n: number) => n * k;
+
+type Timing = { duration?: number | ((d: number) => number); delay?: number };
+
+/** the same params at the chosen speed; `fallback` is the Svelte function's own default */
+function scale<P extends Timing>(params: P | undefined, fallback: Timing["duration"]): P {
+    const d = params?.duration ?? fallback;
+    return {
+        ...params,
+        duration: typeof d === "function" ? (x: number) => ms(d(x)) : ms(d ?? 0),
+        delay: ms(params?.delay ?? 0),
+    } as P;
 }
 
-export const flip = calm(svelteFlip);
-export const fade = calm(svelteFade);
-export const slide = calm(svelteSlide);
+export const flip: typeof svelteFlip = (node, rects, params) =>
+    still() ? NONE : svelteFlip(node, rects, scale(params, (d) => Math.sqrt(d) * 120));
+export const fade: typeof svelteFade = (node, params) => (still() ? NONE : svelteFade(node, scale(params, 400)));
+export const slide: typeof svelteSlide = (node, params) => (still() ? NONE : svelteSlide(node, scale(params, 400)));
 
 /** Tooltip-style appear/disappear; with reduced motion just the fade, in Speed nothing. */
 export function pop(_node: Element, { duration = 150, from = 0.8 } = {}) {
     if (speed()) return NONE;
     const s = reduced?.matches ? 1 : from;
     return {
-        duration,
+        duration: ms(duration),
         easing: cubicOut,
         css: (t: number) => `opacity: ${t}; scale: ${s + (1 - s) * t};`,
     };
@@ -39,7 +62,7 @@ export function grow(node: Element, { duration = 200 } = {}) {
     if (still()) return NONE;
     const h = (node as HTMLElement).offsetHeight;
     return {
-        duration,
+        duration: ms(duration),
         easing: cubicOut,
         // the list's 2px gap comes and goes with it
         css: (t: number) => `overflow: hidden; height: ${t * h}px; opacity: ${t}; margin-top: ${(t - 1) * 2}px;`,
@@ -130,7 +153,7 @@ export function reveal(node: Element, { duration = 1100 } = {}) {
     el.style.maskSize = "100% 100%";
     frame(0);
     return {
-        duration,
+        duration: ms(duration),
         easing: easeInOut,
         tick: (t: number) => {
             frame(t);
@@ -166,7 +189,7 @@ export function recede(node: Element, { duration = 1100 } = {}) {
         if (value) el.style.setProperty(name, value);
     }
     return {
-        duration,
+        duration: ms(duration),
         easing: easeInOut,
         // t runs 1 → 0 on the way out; stays opaque so nothing muddy shows through
         css: (t: number) => `z-index: 0; scale: ${1 + (1 - t) * 0.04};`,
@@ -229,7 +252,7 @@ export function drop(node: Element, { duration = 1000 } = {}) {
     el.style.maskSize = "100% 100%";
     frame(0);
     return {
-        duration,
+        duration: ms(duration),
         tick: (t: number) => {
             frame(t);
             if (t === 1) {

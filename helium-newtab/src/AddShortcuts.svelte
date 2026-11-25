@@ -129,7 +129,7 @@
         padding: 0 var(--gap-1);
         color: var(--tertiary);
         font-size: 13px;
-        transition: color 0.2s;
+        transition: color calc(0.2s * var(--motion, 1));
     }
 
     .hint.ready {

@@ -1,0 +1,32 @@
+diff --git a/dist/index.js b/dist/index.js
+index d578ea41d975007955caee1aa5f47ad3ebb92032..4dc366929d06b2e0fab137ad2055d7eac7e5e66c 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -9191,7 +9191,7 @@ var Atmosphere = class {
+   }
+   probe(t, options) {
+     return this.renderer.probe(
+-      (t - (this.startedAt || t)) / 1e3,
++      this.clock || 0,
+       this.animator.current,
+       this.cam,
+       this.animator.wind,
+@@ -9274,13 +9274,16 @@ var Atmosphere = class {
+       this.startedAt = t;
+       this.last = t;
+     }
+-    const dt = Math.min(0.2, (t - this.last) / 1e3);
++    // Shimmer Tab: its Animation speed setting runs the sky on its own clock,
++    // globalThis.__shimmerMotion (1 / speed) times slower
++    const dt = Math.min(0.2, (t - this.last) / 1e3) / (globalThis.__shimmerMotion || 1);
++    this.clock = (this.clock || 0) + dt;
+     this.last = t;
+     this.animator.step(this.target, dt);
+     if (this.reducedMotion) this.animator.current.celestial.meteors = 0;
+     if (this.opts.lightProbe) this.maybeProbe(t);
+     this.renderer.render(
+-      (t - this.startedAt) / 1e3,
++      this.clock,
+       this.animator.current,
+       this.cam,
+       this.animator.wind,

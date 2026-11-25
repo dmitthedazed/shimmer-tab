@@ -65,7 +65,7 @@
         text-decoration-color: var(--tertiary);
         text-underline-offset: 3px;
         white-space: nowrap;
-        transition: text-decoration-color 0.15s;
+        transition: text-decoration-color calc(0.15s * var(--motion, 1));
     }
 
     .link:hover {
@@ -86,7 +86,7 @@
         border-radius: 50%;
         cursor: pointer;
         color: var(--tertiary);
-        transition: background-color 0.15s, color 0.15s;
+        transition: background-color calc(0.15s * var(--motion, 1)), color calc(0.15s * var(--motion, 1));
     }
 
     .close:hover,

@@ -29,6 +29,7 @@ or **[try it in the browser](https://dmitthedazed.github.io/shimmer-tab/)**
 - **Layout** centered or along either edge.
 - **Browser colors** from Helium's theme, expanded into a full Material palette.
 - **Effects slider.** Speed, Balanced or Beauty. If a slow device struggles, Shimmer Tab switches to Speed on its own and tells you.
+- **Animation speed** from 0.5× to 2×: menus, the intro and the moving wallpapers follow it. Play intro shows the entrance again.
 - **Simple and Advanced settings.** The basics up front, the rest one tap away.
 - **Undo** for removed pictures, shortcuts and folders, and for a reset.
 - Light and dark settings in Prism style, with export and import.

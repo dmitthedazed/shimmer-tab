@@ -12,14 +12,21 @@
     import Section from "./Section.svelte";
     import List from "./List.svelte";
     import PermToggle from "./PermToggle.svelte";
+    import { SPEEDS } from "../motion";
 
     type Props = {
         settings: Settings;
         themeSource: "policy" | "own" | "no-access" | "no-policy" | null;
         emphasize: () => void;
         advanced: boolean;
+        /** plays the whole entrance again, wallpaper and page (App.svelte) */
+        replayIntro?: () => void;
     };
-    let { settings = $bindable(), themeSource, emphasize, advanced }: Props = $props();
+    let { settings = $bindable(), themeSource, emphasize, advanced, replayIntro }: Props = $props();
+
+    // 0.5×, 0.75×, 1×, … in the page's language
+    const number = new Intl.NumberFormat(document.documentElement.lang.replace("_", "-"));
+    const speeds = SPEEDS.map((s) => ({ value: String(s), label: `${number.format(s)}×` }));
 
     // a few of Chromium's own theme seeds, for browsers without the policy
     const themePresets = ["#3450d1", "#1a73e8", "#0b8043", "#c5221f", "#e8710a", "#9334e6"].map((c) => ({
@@ -134,10 +141,49 @@
             }}
         />
         <!-- motion only: Speed has none, so the intro is offered with the other modes -->
-        {#if advanced && settings.effects !== "performance"}
+        {#if settings.effects !== "performance"}
             <div class="more" transition:grow>
-                <Toggle bind:checked={settings.intro} name={t("intro_animation")} desc={t("wallpaper_entrance_when_a")} />
+                <Slider
+                    name={t("animation_speed")}
+                    label={t("animation_speed")}
+                    options={speeds}
+                    bind:value={() => String(settings.animSpeed), (v) => (settings.animSpeed = Number(v))}
+                >
+                    {#snippet action()}
+                        {#if replayIntro}
+                            <button type="button" class="play-intro" onclick={replayIntro}>{t("play_intro")}</button>
+                        {/if}
+                    {/snippet}
+                </Slider>
+                {#if advanced}
+                    <Toggle bind:checked={settings.intro} name={t("intro_animation")} desc={t("wallpaper_entrance_when_a")} />
+                {/if}
             </div>
         {/if}
     </List>
 </Section>
+
+<style>
+    /* on the Animation speed heading line */
+    .play-intro {
+        all: unset;
+        margin: -4px -4px -4px 0;
+        padding: 4px 10px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--primary);
+        background-color: var(--helium-elevated-15);
+        cursor: pointer;
+        transition: background-color calc(0.15s * var(--motion, 1));
+    }
+
+    .play-intro:hover {
+        background-color: var(--helium-elevated-25);
+    }
+
+    .play-intro:focus-visible {
+        outline: 2px solid var(--helium-elevated);
+        outline-offset: 2px;
+    }
+</style>

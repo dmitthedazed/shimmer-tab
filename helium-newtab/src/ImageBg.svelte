@@ -1,5 +1,6 @@
 <script lang="ts">
     import { wallpaper, loadWallpaper, lookAt } from "./wallpaper.svelte";
+    import { ms } from "./motion";
 
     /** blur radius in px; dim: whether the readability veil is on, veil: its strength factor, picture: the veil in the page palette (the picture's colors) */
     let { blur = 0, dim = true, veil = 1, picture = false }: { blur?: number; dim?: boolean; veil?: number; picture?: boolean } = $props();
@@ -25,7 +26,7 @@
         const i = layers.findIndex((l) => l.key === k);
         if (i < 0) return;
         layers[i].shown = true;
-        if (i > 0) setTimeout(() => (layers = layers.filter((l) => l.key >= k)), 700);
+        if (i > 0) setTimeout(() => (layers = layers.filter((l) => l.key >= k)), ms(700));
     }
 </script>
 
@@ -76,15 +77,15 @@
         opacity: 0;
         scale: 1.05;
         transition:
-            opacity 0.7s cubic-bezier(0.215, 0.61, 0.355, 1),
-            scale 0.9s cubic-bezier(0.215, 0.61, 0.355, 1),
-            filter 0.25s ease;
+            opacity calc(0.7s * var(--motion, 1)) cubic-bezier(0.215, 0.61, 0.355, 1),
+            scale calc(0.9s * var(--motion, 1)) cubic-bezier(0.215, 0.61, 0.355, 1),
+            filter calc(0.25s * var(--motion, 1)) ease;
     }
 
     /* Speed: a plain fade, no zoom (lock.css leaves .bg-fade's transitions alone) */
     :global(:root[data-fx="performance"]) img {
         scale: 1;
-        transition: opacity 0.4s linear;
+        transition: opacity calc(0.4s * var(--motion, 1)) linear;
     }
 
     /* Prism's motion: fades in while settling from a slight zoom */
@@ -99,15 +100,15 @@
         inset: 0;
         background: var(--scrim, rgb(8 12 32));
         transition:
-            opacity 0.25s ease,
-            background-color 0.6s ease;
+            opacity calc(0.25s * var(--motion, 1)) ease,
+            background-color calc(0.6s * var(--motion, 1)) ease;
     }
 
     /* the veil follows the picture's own fade, so it doesn't jump ahead of it */
     .switching .scrim {
         transition:
-            opacity 0.7s cubic-bezier(0.215, 0.61, 0.355, 1),
-            background-color 0.7s cubic-bezier(0.215, 0.61, 0.355, 1);
+            opacity calc(0.7s * var(--motion, 1)) cubic-bezier(0.215, 0.61, 0.355, 1),
+            background-color calc(0.7s * var(--motion, 1)) cubic-bezier(0.215, 0.61, 0.355, 1);
     }
 
     .scrim.light {

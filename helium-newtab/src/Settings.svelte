@@ -8,7 +8,7 @@
     import "./settings/settings.css";
     import Segmented from "./Segmented.svelte";
 
-    import { pop, still } from "./motion";
+    import { ms, pop, still } from "./motion";
     import LookTab from "./settings/LookTab.svelte";
     import DataTab from "./settings/DataTab.svelte";
     import SearchTab from "./settings/SearchTab.svelte";
@@ -23,6 +23,7 @@
         glass?: boolean;
         onclose: () => void;
         onaddshortcuts: () => void;
+        replayIntro?: () => void;
     };
 
     let {
@@ -33,6 +34,7 @@
         glass = false,
         onclose,
         onaddshortcuts,
+        replayIntro,
     }: Props = $props();
 
     type Tab = "look" | "shortcuts" | "widgets" | "search" | "data";
@@ -94,7 +96,7 @@
     function swapIn(_node: Element) {
         if (!morph || still()) return { duration: 0 };
         return {
-            duration: 200,
+            duration: ms(200),
             easing: cubicOut,
             css: (e: number) => {
                 return `opacity: ${e}; transform: scale(${0.96 + 0.04 * e});`;
@@ -105,7 +107,7 @@
     function swapOut(_node: Element) {
         if (!morph || still()) return { duration: 0 };
         return {
-            duration: 150,
+            duration: ms(150),
             easing: cubicOut,
             css: (e: number) => {
                 // out of the flow so the new pane takes its place right away
@@ -149,7 +151,7 @@
         {#key tab}
         <div class="pane" in:swapIn out:swapOut>
         {#if tab === "look"}
-            <LookTab bind:settings {themeSource} {emphasize} {advanced} />
+            <LookTab bind:settings {themeSource} {emphasize} {advanced} {replayIntro} />
         {:else if tab === "shortcuts"}
             <ShortcutsTab bind:settings {emphasize} {onclose} {onaddshortcuts} {advanced} />
         {:else if tab === "widgets"}
@@ -253,7 +255,7 @@
     }
 
     .body.morph {
-        transition: height 0.2s ease;
+        transition: height calc(0.2s * var(--motion, 1)) ease;
     }
 
     .content {

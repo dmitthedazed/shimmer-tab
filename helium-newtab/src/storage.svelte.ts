@@ -57,6 +57,8 @@ export type Settings = {
     effectsAuto: boolean;
     /** entrance animation of the wallpaper on page load */
     intro: boolean;
+    /** how fast every animation plays, 1 is as designed (motion.ts SPEEDS) */
+    animSpeed: number;
     shortcuts: boolean;
     lockShortcuts: boolean;
     shortcutTitles: boolean;
@@ -112,6 +114,7 @@ export const defaults: Settings = {
     quiet: false,
     idleFade: false,
     intro: true,
+    animSpeed: 1,
     shortcuts: true,
     lockShortcuts: false,
     shortcutTitles: true,
@@ -159,6 +162,7 @@ export function normalize(raw: Record<string, unknown> | null | undefined): Sett
     // a backup from a newer or older version may carry values this one doesn't know
     if (!["performance", "balanced", "beauty"].includes(settings.effects)) settings.effects = defaults.effects;
     if (!["tab", "hour", "day", "never"].includes(settings.wallpaperEvery)) settings.wallpaperEvery = defaults.wallpaperEvery;
+    if (![0.5, 0.75, 1, 1.5, 2].includes(settings.animSpeed)) settings.animSpeed = defaults.animSpeed;
     // imported backups go through here too: only links that open as pages
     settings.links = Array.isArray(settings.links) ? cleanLinks(settings.links) : [...defaults.links];
     return settings;

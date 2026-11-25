@@ -141,7 +141,7 @@
         border-radius: 10px;
         outline: 1px solid var(--helium-elevated-15);
         outline-offset: -1px;
-        transition: outline-color 0.15s, box-shadow 0.15s;
+        transition: outline-color calc(0.15s * var(--motion, 1)), box-shadow calc(0.15s * var(--motion, 1));
     }
 
     .thumb:hover {
@@ -168,7 +168,7 @@
         background-color: var(--helium-elevated-10);
         background-size: cover;
         background-position: center;
-        transition: scale 0.15s;
+        transition: scale calc(0.15s * var(--motion, 1));
     }
 
     .thumb .pick:active {
@@ -200,7 +200,7 @@
         box-shadow: 0 0 0 1px var(--helium-elevated-10), 0 2px 6px var(--tooltip-shadow);
         opacity: 0;
         scale: 0.8;
-        transition: opacity 0.15s, scale 0.15s, color 0.2s;
+        transition: opacity calc(0.15s * var(--motion, 1)), scale calc(0.15s * var(--motion, 1)), color calc(0.2s * var(--motion, 1));
     }
 
     .thumb .drop :global(svg) {

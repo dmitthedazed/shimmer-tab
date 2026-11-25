@@ -334,7 +334,7 @@
 
     .tile-wrap {
         position: relative;
-        transition: opacity 0.2s;
+        transition: opacity calc(0.2s * var(--motion, 1));
     }
 
     .tile-wrap.dragging {
@@ -348,11 +348,11 @@
         gap: 0;
         width: 92px;
         transition:
-            background-color 0.2s,
-            transform 0.2s,
-            color 0.2s,
-            width 0.25s ease,
-            padding 0.25s ease;
+            background-color calc(0.2s * var(--motion, 1)),
+            transform calc(0.2s * var(--motion, 1)),
+            color calc(0.2s * var(--motion, 1)),
+            width calc(0.25s * var(--motion, 1)) ease,
+            padding calc(0.25s * var(--motion, 1)) ease;
         min-height: 0;
         padding: 12px 6px 10px !important;
         border: none;
@@ -387,7 +387,7 @@
         font-size: 13px;
         white-space: nowrap;
         text-overflow: ellipsis;
-        transition: color 0.2s;
+        transition: color calc(0.2s * var(--motion, 1));
     }
 
     .add {
@@ -416,7 +416,7 @@
         height: 48px;
         border-radius: 14px;
         background: var(--helium-elevated-7);
-        transition: background-color 0.2s;
+        transition: background-color calc(0.2s * var(--motion, 1));
     }
 
     .add:hover .add-icon {
@@ -440,7 +440,7 @@
         box-shadow: 0 0 0 1px var(--helium-elevated-10), 0 2px 6px var(--tooltip-shadow);
         opacity: 0;
         scale: 0.8;
-        transition: opacity 0.15s, scale 0.15s, color 0.2s;
+        transition: opacity calc(0.15s * var(--motion, 1)), scale calc(0.15s * var(--motion, 1)), color calc(0.2s * var(--motion, 1));
     }
 
     .edit svg {
@@ -536,7 +536,7 @@
         height: 48px;
         border-radius: 14px;
         background: var(--helium-elevated-7);
-        transition: background-color 0.2s, scale 0.2s;
+        transition: background-color calc(0.2s * var(--motion, 1)), scale calc(0.2s * var(--motion, 1));
     }
 
     .tile:hover .folder-icon {

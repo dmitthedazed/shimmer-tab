@@ -80,7 +80,7 @@ svg {
 /* page-wide palette changes (motion.ts morphPage), Prism timing */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-    animation-duration: 0.3s;
+    animation-duration: calc(0.3s * var(--motion, 1));
     animation-timing-function: ease;
 }
 

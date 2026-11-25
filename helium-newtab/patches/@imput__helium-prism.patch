@@ -1,0 +1,39 @@
+diff --git a/dist/gradient-shimmer.js b/dist/gradient-shimmer.js
+index 61c55f5961d2a939fdb2d70a45e4f4999c701d95..99ac95881a33a451e05fe39e3735f701c01b166c 100644
+--- a/dist/gradient-shimmer.js
++++ b/dist/gradient-shimmer.js
+@@ -36,6 +36,26 @@ var WAVE_SPEED_UP = {
+     waveDuration: 320,
+     rampDownDuration: 480,
+ };
++// Shimmer Tab: its Animation speed setting multiplies the intro's and the speed-up's
++// timings by globalThis.__shimmerMotion (1 / speed) and divides the idle wave's speeds
++// by it, read when they are used.
++var withMotion = function (timings) {
++    Object.keys(timings).forEach(function (key) {
++        var base = timings[key];
++        if (/delay|duration|stagger/i.test(key)) {
++            Object.defineProperty(timings, key, {
++                get: function () { return base * (globalThis.__shimmerMotion || 1); },
++            });
++        }
++        else if (/speed$/i.test(key)) {
++            Object.defineProperty(timings, key, {
++                get: function () { return base / (globalThis.__shimmerMotion || 1); },
++            });
++        }
++    });
++};
++withMotion(INTRO);
++withMotion(WAVE_SPEED_UP);
+ export var IDLE_WAVE = {
+     speed: 0.42,
+     stripePhase: 0.74,
+@@ -44,6 +64,7 @@ export var IDLE_WAVE = {
+     primaryAmplitude: 0.19,
+     secondaryAmplitude: 0.055,
+ };
++withMotion(IDLE_WAVE);
+ var FULL_CIRCLE = Math.PI * 2;
+ var GRAIN = {
+     size: 180,

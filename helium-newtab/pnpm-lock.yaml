@@ -4,6 +4,10 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  '@imput/helium-prism': 0a12fb44aa823129b1cd5a6011e3818bf6d52da3f118918dd321b8ea9ab1757a
+  '@takustaqu/atmosphere': a4705ef27c0fb63858a15c5b91d854766caf30f73f6f5b92661d7c8cc3fbe30e
+
 importers:
 
   .:
@@ -13,13 +17,13 @@ importers:
         version: 5.3.0
       '@imput/helium-prism':
         specifier: ^0.2.0
-        version: 0.2.0(svelte@5.57.2)
+        version: 0.2.0(patch_hash=0a12fb44aa823129b1cd5a6011e3818bf6d52da3f118918dd321b8ea9ab1757a)(svelte@5.57.2)
       '@material/material-color-utilities':
         specifier: ^0.4.0
         version: 0.4.0
       '@takustaqu/atmosphere':
         specifier: ^0.8.0
-        version: 0.8.0
+        version: 0.8.0(patch_hash=a4705ef27c0fb63858a15c5b91d854766caf30f73f6f5b92661d7c8cc3fbe30e)
     devDependencies:
       '@sveltejs/vite-plugin-svelte':
         specifier: ^7.3.1
@@ -561,7 +565,7 @@ snapshots:
 
   '@fontsource-variable/instrument-sans@5.3.0': {}
 
-  '@imput/helium-prism@0.2.0(svelte@5.57.2)':
+  '@imput/helium-prism@0.2.0(patch_hash=0a12fb44aa823129b1cd5a6011e3818bf6d52da3f118918dd321b8ea9ab1757a)(svelte@5.57.2)':
     dependencies:
       ogl: 1.0.11
       svelte: 5.57.2
@@ -649,7 +653,7 @@ snapshots:
       vite: 8.3.5
       vitefu: 1.1.3(vite@8.3.5)
 
-  '@takustaqu/atmosphere@0.8.0': {}
+  '@takustaqu/atmosphere@0.8.0(patch_hash=a4705ef27c0fb63858a15c5b91d854766caf30f73f6f5b92661d7c8cc3fbe30e)': {}
 
   '@types/chrome@0.3.6':
     dependencies:

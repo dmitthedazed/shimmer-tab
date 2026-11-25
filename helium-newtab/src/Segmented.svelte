@@ -101,7 +101,7 @@
     }
 
     .indicator.animate {
-        transition: transform 0.2s ease, width 0.2s ease;
+        transition: transform calc(0.2s * var(--motion, 1)) ease, width calc(0.2s * var(--motion, 1)) ease;
     }
 
     button {
@@ -120,7 +120,7 @@
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: color 0.2s;
+        transition: color calc(0.2s * var(--motion, 1));
     }
 
     button:hover,

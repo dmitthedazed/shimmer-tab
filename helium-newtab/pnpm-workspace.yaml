@@ -1,0 +1,3 @@
+patchedDependencies:
+  '@imput/helium-prism': patches/@imput__helium-prism.patch
+  '@takustaqu/atmosphere': patches/@takustaqu__atmosphere.patch

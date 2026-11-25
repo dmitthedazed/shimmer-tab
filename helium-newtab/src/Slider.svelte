@@ -1,4 +1,6 @@
 <script lang="ts" generics="T extends string">
+    import type { Snippet } from "svelte";
+
     // A stepped slider over a few named stops (Settings → Look → Effects). The range input
     // carries keyboard and screen reader support; the stop names under it are click targets.
     type Props = {
@@ -7,10 +9,12 @@
         label: string;
         /** a visible heading above the slider */
         name?: string;
+        /** a control at the end of the heading line */
+        action?: Snippet;
         onchange?: (value: T) => void;
     };
 
-    let { options, value = $bindable(), label, name, onchange }: Props = $props();
+    let { options, value = $bindable(), label, name, action, onchange }: Props = $props();
 
     const index = $derived(Math.max(0, options.findIndex((o) => o.value === value)));
     const max = $derived(options.length - 1);
@@ -25,7 +29,12 @@
 </script>
 
 <div class="slider">
-    {#if name}<span class="name">{name}</span>{/if}
+    {#if name || action}
+        <div class="head">
+            {#if name}<span class="name">{name}</span>{/if}
+            {@render action?.()}
+        </div>
+    {/if}
     <input
         type="range"
         min="0"
@@ -92,7 +101,7 @@
         background: var(--helium-elevated);
         border: 3px solid var(--background);
         box-shadow: 0 0 0 1px var(--helium-elevated-40), 0 2px 6px var(--tooltip-shadow);
-        transition: scale 0.15s cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow 0.15s;
+        transition: scale calc(0.15s * var(--motion, 1)) cubic-bezier(0.215, 0.61, 0.355, 1), box-shadow calc(0.15s * var(--motion, 1));
     }
 
     input:hover::-webkit-slider-thumb {
@@ -125,7 +134,7 @@
         cursor: pointer;
         font-size: 12px;
         color: var(--tertiary);
-        transition: color 0.2s;
+        transition: color calc(0.2s * var(--motion, 1));
     }
 
     /* the end names line up with the track ends (their text, not their padding) */
@@ -152,6 +161,14 @@
         margin: 0;
         font-size: 13px;
         color: var(--secondary);
+    }
+
+    .head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--gap-1) var(--gap-2);
     }
 
     .name {

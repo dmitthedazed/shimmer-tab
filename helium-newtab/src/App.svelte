@@ -1,7 +1,7 @@
 <script lang="ts">
     import { t } from "./i18n";
-    import { onMount } from "svelte";
-    import { drop, morphPage, pop, recede, reveal, still } from "./motion";
+    import { onMount, tick } from "svelte";
+    import { drop, morphPage, ms, pop, recede, reveal, setMotionSpeed, still } from "./motion";
     import { forceScheme, type Forced } from "./scheme.svelte";
     import { perms } from "./permissions.svelte";
     import {
@@ -115,6 +115,11 @@
     $effect(() => {
         root.dataset.fx = settings.effects;
     });
+    // animation speed (Settings → Look → Effects), also before the wallpaper mounts; its
+    // slider is hidden in Speed, so there the moving wallpapers keep their own pace
+    const motionSpeed = () => (settings.effects === "performance" ? 1 : settings.animSpeed);
+    setMotionSpeed(motionSpeed());
+    $effect(() => setMotionSpeed(motionSpeed()));
     forceScheme(mode);
     picture(look);
     if (settings.browserTheme || (settings.pictureColors && bg === "image")) refreshBrowserTheme();
@@ -125,7 +130,7 @@
         const [next, nextLook] = [mode, look];
         const apply = () => {
             // a new picture may flip the scheme: ease that too
-            forceScheme(next, switching ? 1100 : 600);
+            forceScheme(next, ms(switching ? 1100 : 600));
             picture(nextLook);
             if (settings.browserTheme && refreshBrowserTheme()) themeVersion++;
         };
@@ -192,7 +197,7 @@
             const dy = was.top - now.top;
             if (!el.isConnected || (Math.abs(dx) < 1 && Math.abs(dy) < 1)) continue;
             el.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], {
-                duration: 450,
+                duration: ms(450),
                 easing: "cubic-bezier(0.3, 1, 0.5, 1)",
                 composite: "add",
             });
@@ -215,8 +220,33 @@
     // the page UI rises in after the star entrance (see Stars.svelte)
     const starsEntrance =
         bg === "stars" && settings.intro && settings.effects !== "performance" && !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let starsArrived = $state(!starsEntrance);
-    if (starsEntrance) setTimeout(() => (starsArrived = true), 1000); // never stay hidden
+    let entrance = $state(starsEntrance);
+    let arrived = $state(!starsEntrance);
+    let arriveTimer = starsEntrance ? setTimeout(() => arrive(), ms(1000)) : undefined; // never stay hidden
+    function arrive() {
+        clearTimeout(arriveTimer);
+        if (arrived) return;
+        arrived = true;
+        // a replay: the greeting's own beat after the mark plays again too
+        if (introRun) for (const p of document.querySelectorAll(".greeting p")) for (const a of p.getAnimations()) a.play();
+    }
+
+    // Settings → Effects → Play intro: the whole entrance once more, at the chosen speed.
+    // The wallpaper is remounted with its intro forced on for that one mount, and the page
+    // hides and rises in again as it would after the warp: once the stars brake (Stars
+    // onintro), as the shimmer's stripes come in, or after a beat on the other wallpapers.
+    let introRun = $state(0);
+    let replaying = $state(false);
+    function replayIntro() {
+        replaying = true;
+        introRun++;
+        tick().then(() => (replaying = false));
+        if (still()) return;
+        entrance = true;
+        arrived = false;
+        clearTimeout(arriveTimer);
+        arriveTimer = setTimeout(arrive, ms(bg === "stars" ? 1000 : bg === "shimmer" ? 700 : 200));
+    }
 
     // the shimmer's intro reveal is for page load only, not for switching to it
     // (derived, so the new wallpaper already reads it as it mounts: an effect would set it a
@@ -552,7 +582,7 @@
     let belowH = $state(0);
     let settled = $state(false);
     onMount(() => {
-        const t = setTimeout(() => (settled = true), 600);
+        const t = setTimeout(() => (settled = true), ms(600));
         return () => clearTimeout(t);
     });
 
@@ -661,16 +691,23 @@
         onintroend={() => bgSwitched && shimmer?.emphasize()}
     >
         {#if bg === "shimmer"}
-            {#key themeVersion}
+            {#key `${themeVersion}:${introRun}`}
                 <GradientShimmer
                     bind:this={shimmer}
                     background
-                    intro={settings.intro && settings.effects !== "performance" && themeVersion === 0 && !bgSwitched}
+                    intro={replaying || (settings.intro && settings.effects !== "performance" && themeVersion === 0 && !bgSwitched)}
                     class="bg"
                 />
             {/key}
         {:else if bg === "stars"}
-            <Stars still={settings.effects === "performance"} intro={starsEntrance && !bgSwitched} onintro={() => (starsArrived = true)} />
+            {#key introRun}
+                <Stars
+                    still={settings.effects === "performance"}
+                    intro={starsEntrance && !bgSwitched}
+                    replay={replaying}
+                    onintro={arrive}
+                />
+            {/key}
         {:else if bg === "image"}
             <ImageBg blur={settings.imageBlur} dim={settings.wallpaperDim} veil={settings.effects === "beauty" ? 0.5 : 1} picture={settings.pictureColors} />
         {:else if bg === "weather"}
@@ -705,7 +742,7 @@
     />
 {/if}
 
-{#if (barClock || barWeather) && starsArrived && !settings.quiet}
+{#if (barClock || barWeather) && arrived && !settings.quiet}
     <header class={["datetime", side && "side", idle && "idle"]} style:--align={side} transition:pop>
         {#if barClock}
             <span class="group" transition:pop>
@@ -788,7 +825,7 @@
 <main
     style:--below="{belowH}px"
     style:--align={side}
-    class={["shell", side && "side", !settings.logoShown && "no-logo", searchTucked && "no-search", idle && "idle", settled && "settled", bg !== "none" && "glass-children", !starsArrived && "waiting", starsEntrance && "entrance"]}>
+    class={["shell", side && "side", !settings.logoShown && "no-logo", searchTucked && "no-search", idle && "idle", settled && "settled", bg !== "none" && "glass-children", !arrived && "waiting", entrance && "entrance"]}>
     <!-- fixed box: both variants swap in place without moving the search -->
     {#if settings.logoShown}
     <div class="logo" transition:pop>
@@ -1012,6 +1049,7 @@
             glass={bg !== "none"}
             onclose={() => (settingsOpen = false)}
             onaddshortcuts={() => (addingShortcuts = true)}
+            {replayIntro}
         />
     {/await}
 {/if}
@@ -1085,25 +1123,25 @@
         --side: left;
     }
 
-    /* after the star entrance: the UI rises out of the light, one piece after another */
+    /* after the star entrance (and on Play intro): the UI rises out of the light, one piece after another */
     .shell.waiting > :global(*) {
         opacity: 0;
     }
 
     .shell.entrance:not(.waiting) > :global(*) {
-        animation: rise 0.45s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        animation: rise calc(0.45s * var(--motion, 1)) cubic-bezier(0.16, 1, 0.3, 1) backwards;
     }
 
     .shell.entrance:not(.waiting) > :global(:nth-child(2)) {
-        animation-delay: 0.04s;
+        animation-delay: calc(0.04s * var(--motion, 1));
     }
 
     .shell.entrance:not(.waiting) > :global(:nth-child(3)) {
-        animation-delay: 0.08s;
+        animation-delay: calc(0.08s * var(--motion, 1));
     }
 
     .shell.entrance:not(.waiting) > :global(:nth-child(4)) {
-        animation-delay: 0.12s;
+        animation-delay: calc(0.12s * var(--motion, 1));
     }
 
     @keyframes rise {
@@ -1191,7 +1229,7 @@
     /* the words settle in a beat after the mark, like a tooltip popping in */
     @media (prefers-reduced-motion: no-preference) {
         .greeting p {
-            animation: greet 0.35s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+            animation: greet calc(0.35s * var(--motion, 1)) calc(0.08s * var(--motion, 1)) cubic-bezier(0.16, 1, 0.3, 1) both;
         }
     }
 
@@ -1255,7 +1293,7 @@
     }
 
     .shell.settled {
-        transition: padding-top 0.45s cubic-bezier(0.3, 1, 0.5, 1);
+        transition: padding-top calc(0.45s * var(--motion, 1)) cubic-bezier(0.3, 1, 0.5, 1);
     }
 
     .below {
@@ -1272,7 +1310,7 @@
 
     .shell .below,
     .datetime {
-        transition: opacity 0.25s ease;
+        transition: opacity calc(0.25s * var(--motion, 1)) ease;
     }
 
     .shell.idle .below,
@@ -1280,7 +1318,7 @@
     .corner.idle {
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.8s ease;
+        transition: opacity calc(0.8s * var(--motion, 1)) ease;
     }
 
     .datetime {
@@ -1407,10 +1445,10 @@
         width: min(100%, 600px);
         interpolate-size: allow-keywords;
         transition:
-            height 0.3s cubic-bezier(0.3, 1, 0.5, 1),
-            margin 0.3s cubic-bezier(0.3, 1, 0.5, 1),
-            opacity 0.25s,
-            scale 0.25s;
+            height calc(0.3s * var(--motion, 1)) cubic-bezier(0.3, 1, 0.5, 1),
+            margin calc(0.3s * var(--motion, 1)) cubic-bezier(0.3, 1, 0.5, 1),
+            opacity calc(0.25s * var(--motion, 1)),
+            scale calc(0.25s * var(--motion, 1));
     }
 
     /* folded away along with the gap under it, but still focusable, so type-to-search
@@ -1480,7 +1518,7 @@
         font-size: 14px;
         text-align: left;
         cursor: pointer;
-        transition: background-color 0.15s, color 0.15s;
+        transition: background-color calc(0.15s * var(--motion, 1)), color calc(0.15s * var(--motion, 1));
     }
 
     .bang-item.active {
@@ -1559,7 +1597,7 @@
         display: flex;
         gap: var(--gap-1);
         opacity: 0.25;
-        transition: opacity 0.3s;
+        transition: opacity calc(0.3s * var(--motion, 1));
     }
 
     .corner:hover,

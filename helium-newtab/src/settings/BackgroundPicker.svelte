@@ -153,7 +153,7 @@
         background: var(--background);
         outline: 1px solid var(--helium-elevated-15);
         outline-offset: -1px;
-        transition: outline-color 0.15s, transform 0.15s, box-shadow 0.15s;
+        transition: outline-color calc(0.15s * var(--motion, 1)), transform calc(0.15s * var(--motion, 1)), box-shadow calc(0.15s * var(--motion, 1));
     }
 
     .bg-option:hover .bg-preview {
